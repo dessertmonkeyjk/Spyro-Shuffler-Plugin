@@ -3,7 +3,9 @@ local plugin = {}
 plugin.name = "Spyro Shuffler"
 plugin.author = "dessertmonkeyjk"
 plugin.minversion = "2.6.2"
-plugin.settings = {}
+plugin.settings = {
+	{ name='gemthreshold', type='number', label='Gems Swap Threshold', default=1 },
+}
 
 plugin.description =
 [[
@@ -30,7 +32,7 @@ plugin.description =
 		-Put code for tracking collectables into function(s) 
 			1. (on swap) Get static x collectable count for current game from game table
 			2. (on swap) Add static total for all games x collectables from game table (for diff, HUD sync)
-			3. (on update) Get x collectable delta PER FRAME and for current swap
+			3. **(on update) Get x collectable delta PER FRAME and for current swap
 			4. (on update) Check for PER FRAME swap threshold (maybe x collected for swap as well but moneybags...)
 			5. (pre swap) Add new x collectable gotten to current game in game table
 	-Fix issue for Spyro 1 HUD losing its mind when setting value to 0
@@ -51,6 +53,23 @@ function get_gametag ()
 	local tag = get_tag_from_hash_db(gameinfo.getromhash(), 'plugins/spyro-games-hashes.dat')
 	if tag == nil then tag = 'none' end
 	return tag
+end
+
+
+-- Solve for x collectable PER FRAME and for current swap, output multiple
+function update_collectable_frame (i_coldframe,i_totalcolvar,i_curcolthisframe,i_colcheckedlastframe)
+	-- g_coldframe - Frames since cold start
+	-- i_curcolthisframe - Collectable value in game this frame
+	-- i_colcheckedlastframe - Updated if swap trigger (o_collastframedelta) fails with i_curcolthisframe
+	-- o_collastframedelta - Collectable value colledted in game last frame
+	-- o_colthisswap - Collectable value in game this swap
+	-- i_totalcolvar - Static total collectable from game table
+	if i_coldframe >= 2 then 
+		o_collastframedelta = i_curcolthisframe - i_colcheckedlastframe
+		o_colthisswap = i_curcolthisframe - i_totalcolvar	
+	end
+	
+	return o_colthisswap,o_collastframedelta
 end
 
 -- Specific functions based on game tag, how to get/set values per game
@@ -89,7 +108,7 @@ function plugin.on_game_load(data, settings)
 	--Get global data
 	g_gamehash = gameinfo.getromhash()
 	gt_coldstart = data.coldstart[g_gamehash]
-	g_colthreshold = 5
+	g_colthreshold = settings.gemthreshold
 
 	-- Get current game data tag
 	g_tag = get_gametag()
@@ -179,6 +198,13 @@ function plugin.on_frame(data, settings)
 			g_coldframe = g_coldframe + 1
 		end
 		
+		-- Rework to use function per collectable
+		local gemvarupdate = {update_collectable_frame (g_coldframe,g_totalcolvar,gdf_curcollectvar,gdf_lastcheckcollectvar)}
+
+		-- local testoutput = {update_collectable_frame (g_coldframe,g_totalcolvar,gdf_curcollectvar,gdf_lastcheckcollectvar)}
+		-- console.log(testoutput[1])
+		-- console.log(testoutput[2])
+
 		if g_coldframe >= 2 then 
 			f_collastframedelta = gdf_curcollectvar - gdf_lastcheckcollectvar
 			f_colthisswap = gdf_curcollectvar - g_totalcolvar	
