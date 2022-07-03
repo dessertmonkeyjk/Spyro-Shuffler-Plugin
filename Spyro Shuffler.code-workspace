@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"fsdeploy.nodes": [
+			{
+			"source":"D:/Users/Adam/Documents/Actual Documents/Projects/VSCode Projects/Bizhawk Shuffler/Spyro Shuffler/Release",
+			"target":"D:/Users/Adam/Documents/Actual Documents/Projects/VSCode Projects/TestDepoly/",
+			"include":"**/*.*",
+			// "exclude":"**/min/*.*",
+			"deleteTargetOnDeploy": true,
+			}
+		],
+		"fsdeploy.deployOnSave": true
+	}
+}
