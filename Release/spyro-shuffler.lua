@@ -12,7 +12,7 @@ plugin.description =
 	Swaps games whenever a gem is collected in-game, as well as syncs gems across games.
 	Only gem total and hud are synced.
 	
-	Currently supported (hex values to watch)
+	Currently supported
 
 	Spyro 1 NTSC
 	Spyro 1 NTSC (Japan)
@@ -49,6 +49,7 @@ end
 
 -- Specific functions based on game tag, how to get/set values per game
 -- Spyro 1 HUD defaults to level gems, can be set to total gems on HUD
+-- * = not set yet
 local gamedata = {
 	['spyro1ntsc']={ -- Spyro the Dragon NTSC [total gems, gem hud*, dragon post collect]
 		getgemvar=function() return mainmemory.read_u16_le(0x075860) end,
@@ -91,22 +92,21 @@ function plugin.on_game_load(data, settings)
 	--Init first frame after cold start
 	g_coldframe = 0
 	
-	-- Get current REAL gem total from game table [g_totalcolvar] (on swap), use for adding new gems later
-	-- Set gem TOTAL gem count from game table (on swap), subtract from current frame TOTAL count for gems to add [deltacollectvar] (on update)
-	-- Add diff gems to REAL gem count (pre-swap)
-	
 	-- Get current game data, get real value, override after, set back before swap
 	g_tag = get_gametag()
 	if g_tag == 'none' then
 		console.log('!!Game not recognized!! Is it not in the database file?')
 	end
 	
+	-- 1 Get current game gem count from game table [gt_realcollectvar] (on swap)
+
 	if data.collectvar[gameinfo.getromhash()] ~= nil then
 		gt_realcollectvar = data.collectvar[gameinfo.getromhash()]
 	else
 		gt_realcollectvar = 0
 	end
 
+	-- 2 Add up current gem total from game table [g_totalcolvar] (on swap)
 	-- Add up total collect var so far
 	g_totalcolvar = 0
 	-- g_displaycollectdelta = 0
@@ -146,7 +146,7 @@ function plugin.on_frame(data, settings)
 			return 	
 		end
 	end
-		
+
 	--Use global var for game data from load fn (gd_curcollectvar, g_tag)
 	-- Get init collect, cur collect, and previous frame collect var
 	local gdf_curcollectvar = gamedata[g_tag].getgemvar()
@@ -168,6 +168,8 @@ function plugin.on_frame(data, settings)
 			f_totalcurverset = true
 		end
 		
+		-- 3 Get diff between current game gem count 
+		-- and total gem count from game table [fdeltacollectvar] (on update)
 		-- Check how many frames has passed since cold start/swap	
 		
 		if frames_since_restart >= 1 then
@@ -195,6 +197,7 @@ function plugin.on_frame(data, settings)
 		-- Debug
 		-- gui.drawText(10, 20, string.format("Var collect for swap: %d", fdeltacollectvar),0xFFFFFFFF, 0xFF000000, 16)
 	
+
 		
 	-- Run collect change check, delay so total collect change is set first
 		if g_coldframe >= 2 then
@@ -220,6 +223,7 @@ function plugin.on_game_save(data, settings)
 	local oldgemval = data.collectvar[gameinfo.getromhash()]
 	
 	-- Add last gem total from game data table and gems collected this swap, add back into table
+	-- 4 Add diff gems to REAL gem count (pre-swap)
 	local newgemval = gt_realcollectvar + fdeltacollectvar
 	data.collectvar[gameinfo.getromhash()] = newgemval
 	
