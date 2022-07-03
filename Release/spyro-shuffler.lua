@@ -1,6 +1,6 @@
 local plugin = {}
 
-plugin.name = "Spyro Gem Shuffler"
+plugin.name = "Spyro Shuffler"
 plugin.author = "dessertmonkeyjk"
 plugin.minversion = "2.6.2"
 plugin.settings = {}
@@ -42,7 +42,7 @@ end
 
 -- Get game tag 
 function get_gametag ()
-	local tag = get_tag_from_hash_db(gameinfo.getromhash(), 'plugins/spyrops1-hashes.dat')
+	local tag = get_tag_from_hash_db(gameinfo.getromhash(), 'plugins/spyro-games-hashes.dat')
 	if tag == nil then tag = 'none' end
 	return tag
 end

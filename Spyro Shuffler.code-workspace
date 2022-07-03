@@ -6,8 +6,9 @@
 	],
 	"settings": {
 		"fsdeploy.nodes": [
+
 			{
-			"source":"D:/Users/Adam/Documents/Actual Documents/Projects/VSCode Projects/Bizhawk Shuffler/Spyro Shuffler/Release",
+			"source":"D:/Users/Adam/Documents/Actual Documents/Projects/VSCode Projects/Bizhawk Shuffler/Spyro Shuffler Plugin/Release/",
 			"target":"D:/Users/Adam/Documents/Actual Documents/Projects/VSCode Projects/TestDepoly/",
 			"include":"**/*.*",
 			// "exclude":"**/min/*.*",
