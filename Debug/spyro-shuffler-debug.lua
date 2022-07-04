@@ -244,13 +244,12 @@ function plugin.on_frame(data, settings)
 			gamedata[g_tag].setgemvar(gr_gemvarsetup[2])
 			gamedata[g_tag].setmainvar(gr_mainvarsetup[2])
 			
-			
-
 			gdf_gemlastcheckcollectvar = gr_gemvarsetup[2]
 			gdf_mainlastcheckcollectvar = gr_mainvarsetup[2]
+
 			g_totalcurverset = true
 		end
-		
+
 		-- 3 Get diff between current game gem count 
 		-- and total gem count from game table [f_colthisswap] (on update)
 		-- Check how many frames has passed since cold start/swap	
@@ -258,9 +257,11 @@ function plugin.on_frame(data, settings)
 		if frames_since_restart >= 1 then
 			g_coldframe = g_coldframe + 1
 		end
-		
+
+		-- Var 1 collected this swap, Var 2 collected THIS FRAME
 		r_gemvarupdate = {update_collectable_frame(g_coldframe,gr_gemvarsetup[2],gdf_gemcollectvar,gdf_gemlastcheckcollectvar)}
 		r_mainvarupdate = {update_collectable_frame(g_coldframe,gr_mainvarsetup[2],gdf_maincollectvar,gdf_mainlastcheckcollectvar)}
+
 
 		-- Unused moved to function
 		-- if g_coldframe >= 2 then 
@@ -282,12 +283,24 @@ function plugin.on_frame(data, settings)
 		end
 		
 		-- Debug
-		gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_mainvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
 		
 	-- Run collect change check, delay so total collect change is set first
 		if g_coldframe >= 2 then
+
+			-- Wait until HUD shows total before checking
+			-- Check current val is not equal to total, and collected this swap is 0
+			-- CANNOT BE PER FRAME FOR MAIN COLLECTABLES OR IT'LL SET IT OFF
+			if gdf_maincollectvar ~= gr_mainvarsetup[2] and r_mainvarupdate[1] <= 0 then
+				hudupdate = true
+				-- console.log(hudupdate)
+				-- console.log('current value',r_mainvarupdate[1])
+			else
+				hudupdate = false
+			end
+		
 			-- If pre is higher than cur, swap, otherwise set pre to cur on next frame
-			if r_mainvarupdate[2] >= us_gemthreshold and gr_mainvarsetup[2] == gdf_maincollectvar then
+			if r_mainvarupdate[1] >= us_gemthreshold and hudupdate == false then
 				swap_game()
 			else
 				gdf_gemlastcheckcollectvar = gdf_gemcollectvar
