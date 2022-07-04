@@ -29,14 +29,18 @@ plugin.description =
 
 	To-do
 	-Rework code so swap trigger & swap total can be set by user (gems, dragon/orb/egg)
+	-Issue: Swap can trigger twice when HUD is animating, wait until HUD matches data table before checking threshold?
 		-Push code for triggering based on collectable into function(s)
 		-Put code for tracking collectables into function(s) 
-			1. (on swap) Get static x collectable count for current game from game table
-			2. (on swap) Add static total for all games x collectables from game table (for diff, HUD sync)
+			1. **(on swap) Get static x collectable count for current game from game table
+			2. **(on swap) Add static total for all games x collectables from game table (for diff, HUD sync)
 			3. **(on update) Get x collectable delta PER FRAME and for current swap
 			4. (on update) Check for PER FRAME swap threshold (maybe x collected for swap as well but moneybags...)
 			5. (pre swap) Add new x collectable gotten to current game in game table
-	-Fix issue for Spyro 1 HUD losing its mind when setting value to 0
+	-Option to have trigger be x collected for current swap, prevent decrease of value by moneybags for trigger purposes
+	-Option to switch between x collected PER FRAME or for current swap
+	-Option to show total x collected on HUD (gems works, what about main collectable/lives?)
+
 ]]
 
 -- called once at the start
@@ -45,7 +49,7 @@ function plugin.on_setup(data, settings)
 	
 	data.tags = data.tags or {}
 	data.gemscollected = data.gemscollected or {}
-	data.realcollectvar = data.realcollectvar or {}
+	data.maincollected = data.maincollected or {}
 	data.coldstart = data.coldstart or {}
 end
 
@@ -59,12 +63,13 @@ end
 
 -- Solve for x collectable PER FRAME and for current swap, output multiple
 function update_collectable_frame (i_coldframe,i_totalcolvar,i_curcolthisframe,i_colcheckedlastframe)
-	-- g_coldframe - Frames since cold start
+	-- i_coldframe - Frames since cold start
 	-- i_curcolthisframe - Collectable value in game this frame
 	-- i_colcheckedlastframe - Updated if swap trigger (o_collastframedelta) fails with i_curcolthisframe
+	-- i_totalcolvar - Static total collectable from game table
 	-- o_collastframedelta - Collectable value colledted in game last frame
 	-- o_colthisswap - Collectable value in game this swap
-	-- i_totalcolvar - Static total collectable from game table
+
 
 	o_collastframedelta = 0
 	o_colthisswap = 0
@@ -104,29 +109,41 @@ end
 -- Spyro 1 HUD defaults to level gems, can be set to total gems on HUD
 -- * = not set yet
 local gamedata = {
-	['spyro1ntsc']={ -- Spyro the Dragon NTSC [total gems, gem hud*, dragon post collect]
+	['spyro1ntsc']={ 
+		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect]
+		-- HUD (0x077FCC) updates based on global value (0x075750), get Global var for trigger, set both??
 		getgemvar=function() return mainmemory.read_u16_le(0x075860) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
-		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x077FC8, value) end
+		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x077FC8, value) end,
+		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
 	},
-	['spyro1jntsc']={ -- Spyro the Dragon J [total gems, gem hud*, dragon post collect*]
+	['spyro1jntsc']={ 
+		-- Spyro the Dragon Japan [total gems, gem hud*, dragon post collect*]
+		-- Gem var not set yet in HUD
 		getgemvar=function() return mainmemory.read_u16_le(0x07F3F0) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x07F3F0, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x075860, value) end
 	},
-	['spyro2ntsc']={ -- Spyro 2 NTSC [total gems, gem hud*, orb post collect*]
+	['spyro2ntsc']={ 
+		-- Spyro 2 NTSC [total gems, gem hud, orb post collect]
+		-- No idea where the HUD value is stored, Orb global (0x06702C) is updated right before Orb is given
 		getgemvar=function() return mainmemory.read_u16_le(0x0670CC) end,
-		getmainvar=function() return mainmemory.read_u16_le(0x0670CC) end,
+		getmainvar=function() return mainmemory.read_u16_le(0x06702C) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x0670CC, value) end,
-		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067660, value) end
+		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067660, value) end,
+		setmainvar=function(value) return mainmemory.write_u16_le(0x06702C, value) end,
 	},
-	['spyro3ntsc']={ -- Spyro: Year of the Dragon NTSC [total gems, gem hud*, egg post collect]
+	['spyro3ntsc']={ 
+		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect]
+		-- Egg global updates the HUD, safe to set Global (0x06C740) and trigger with HUD (0x067410)
+		-- Issue, if HUD is still updating it'll trigger again... maybe just watch global :(
 		getgemvar=function() return mainmemory.read_u16_le(0x06C7FC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x067410) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x06C7FC, value) end,
-		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067368, value) end
+		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067368, value) end,
+		setmainvar=function(value) return mainmemory.write_u16_le(0x06C740,value) end
 	}
 }
 
@@ -134,6 +151,7 @@ local gamedata = {
 function plugin.on_game_load(data, settings)
 	
 	--Get global data
+	plugversion='07-04-2022'
 	g_gamehash = gameinfo.getromhash()
 	gt_coldstart = data.coldstart[g_gamehash]
 	us_gemthreshold = settings.gemthreshold
@@ -157,10 +175,17 @@ function plugin.on_game_load(data, settings)
 	g_coldframe = 0
 	
 	-- Get collectable var from gametable for tracking
+	-- Var 1 current game collected, Var 2 total collected
 	gt_gemscollected = data.gemscollected
 	gr_gemvarsetup = {get_collectable_ingametable (gt_gemscollected,g_gamehash)}
-	console.log(gr_gemvarsetup[1])
 
+	gt_maincollected = data.maincollected
+	gr_mainvarsetup = {get_collectable_ingametable (gt_maincollected,g_gamehash)}
+
+	console.log(gr_gemvarsetup[1])
+	console.log(gr_mainvarsetup[1])
+
+	-- Unused moved to function
 	-- -- 1 Get current game gem count from game table [gt_realcollectvar] (on swap)
 	-- if data.gemscollected[g_gamehash] ~= nil then
 	-- 	gt_realcollectvar = data.gemscollected[g_gamehash]
@@ -168,6 +193,7 @@ function plugin.on_game_load(data, settings)
 	-- 	gt_realcollectvar = 0
 	-- end
 
+	-- Unused moved to function
 	-- -- 2 Add up current gem total from game table [g_totalcolvar] (on swap)
 	-- -- Add up total collect var so far
 	-- g_totalcolvar = 0
@@ -205,18 +231,23 @@ function plugin.on_frame(data, settings)
 		-- Use global var for game data from load fn (gd_curcollectvar, g_tag)
 		-- Get init collect, cur collect, and previous frame collect var
 
-		local gdf_curcollectvar = gamedata[g_tag].getgemvar()
+		local gdf_gemcollectvar = gamedata[g_tag].getgemvar()
+		local gdf_maincollectvar = gamedata[g_tag].getmainvar()
 
 		-- Unused moved to function
 		-- local f_collastframedelta = 0
 		-- f_colthisswap = 0
 		
 		-- Set cur var to game memory (not HUD)
-		-- Run before checking for gem change, update last checked var
+		-- Run before checking for collectable change, update last checked var
 		if g_totalcurverset == false then
 			gamedata[g_tag].setgemvar(gr_gemvarsetup[2])
+			gamedata[g_tag].setmainvar(gr_mainvarsetup[2])
 			
-			gdf_lastcheckcollectvar = gr_gemvarsetup[2]
+			
+
+			gdf_gemlastcheckcollectvar = gr_gemvarsetup[2]
+			gdf_mainlastcheckcollectvar = gr_mainvarsetup[2]
 			g_totalcurverset = true
 		end
 		
@@ -228,47 +259,48 @@ function plugin.on_frame(data, settings)
 			g_coldframe = g_coldframe + 1
 		end
 		
-		local gr_gemvarsetup_lastframe = gr_gemvarsetup[2]
-		r_gemvarupdate = {update_collectable_frame(g_coldframe,gr_gemvarsetup[2],gdf_curcollectvar,gdf_lastcheckcollectvar)}
+		r_gemvarupdate = {update_collectable_frame(g_coldframe,gr_gemvarsetup[2],gdf_gemcollectvar,gdf_gemlastcheckcollectvar)}
+		r_mainvarupdate = {update_collectable_frame(g_coldframe,gr_mainvarsetup[2],gdf_maincollectvar,gdf_mainlastcheckcollectvar)}
 
 		-- Unused moved to function
 		-- if g_coldframe >= 2 then 
-		-- 	f_collastframedelta = gdf_curcollectvar - gdf_lastcheckcollectvar
-		-- 	f_colthisswap = gdf_curcollectvar - g_totalcolvar	
+		-- 	f_collastframedelta = gdf_gemcollectvar - gdf_gemlastcheckcollectvar
+		-- 	f_colthisswap = gdf_gemcollectvar - g_totalcolvar	
 		-- end
 
-		-- Set HUD gem count PER FRAME
+		-- Set HUD var count PER FRAME
 		-- Spyro 1 handles the HUD on a per level basis, handled in plug-in
 		-- 	Why does it count one extra??
 		-- Need to check multiple Spyro 1 tags
 		if g_tag == "spyro1ntsc" then
-			local f_newgemval = gr_gemvarsetup[2] + r_gemvarupdate[2] - 1
+			local f_newgemval = gr_gemvarsetup[2] + r_gemvarupdate[1] - 1
 			if f_newgemval <= 0 then f_newgemval = 0 end
 			gamedata[g_tag].setgemhuds1var(f_newgemval)
 		else
-			local f_newgemval = gr_gemvarsetup[2] + r_gemvarupdate[2]
+			local f_newgemval = gr_gemvarsetup[2] + r_gemvarupdate[1]
 			gamedata[g_tag].setgemhudvar(f_newgemval)
 		end
 		
 		-- Debug
-		gui.drawText(10, 20, string.format("Var collect for swap: %d", r_gemvarupdate[2]),0xFFFFFFFF, 0xFF000000, 16)
+		gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
 		
 	-- Run collect change check, delay so total collect change is set first
 		if g_coldframe >= 2 then
 			-- If pre is higher than cur, swap, otherwise set pre to cur on next frame
-			if r_gemvarupdate[1] >= us_gemthreshold then
+			if r_mainvarupdate[2] >= us_gemthreshold and gr_mainvarsetup[2] == gdf_maincollectvar then
 				swap_game()
 			else
-				gdf_lastcheckcollectvar = gdf_curcollectvar
+				gdf_gemlastcheckcollectvar = gdf_gemcollectvar
+				gdf_mainlastcheckcollectvar = gdf_maincollectvar
 			end
 		end
 end
 
 	-- Debug
-	gui.drawText(10, 5, string.format("Var collected: %d", gr_gemvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 16)
-	gui.drawText(10, 35, string.format("Gem threshold: %d", us_gemthreshold),0xFFFFFFFF, 0xFF000000, 16)
-	gui.drawText(10, 50, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 16)
-	
+	gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
+	gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_gemthreshold),0xFFFFFFFF, 0xFF000000, 20)
+	gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
+	gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
 end
 
 -- called each time a game/state is saved (before swap)
@@ -276,9 +308,13 @@ function plugin.on_game_save(data, settings)
 	
 	-- Add last gem total from game data table and gems collected this swap, add back into table
 	-- 4 Add diff gems to REAL gem count (pre-swap)
-	local newgemval = gr_gemvarsetup[1] + r_gemvarupdate[2]
+	local newgemval = gr_gemvarsetup[1] + r_gemvarupdate[1]
 	data.gemscollected[g_gamehash] = newgemval
 	
+	local newmainval = gr_mainvarsetup[1] + r_mainvarupdate[1]
+	data.maincollected[g_gamehash] = newmainval
+
+
 	-- Wait until swap total is updated before next swap var check
 	g_totalcurverset = false
 	
