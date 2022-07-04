@@ -29,7 +29,6 @@ plugin.description =
 
 	To-do
 	-Rework code so swap trigger & swap total can be set by user (gems, dragon/orb/egg)
-	-Issue: Swap can trigger twice when HUD is animating, wait until HUD matches data table before checking threshold?
 		-Push code for triggering based on collectable into function(s)
 		-Put code for tracking collectables into function(s) 
 			1. **(on swap) Get static x collectable count for current game from game table
@@ -106,12 +105,13 @@ function get_collectable_ingametable (i_gametable,i_gamehash)
 end
 
 -- Specific functions based on game tag, how to get/set values per game
+-- Get Global value, Trigger swap on HUD update
 -- Spyro 1 HUD defaults to level gems, can be set to total gems on HUD
 -- * = not set yet
 local gamedata = {
 	['spyro1ntsc']={ 
 		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect]
-		-- HUD (0x077FCC) updates based on global value (0x075750), get Global var for trigger, set both??
+		-- HUD (0x077FCC) updates based on global value (0x075750), get Global var for trigger, set both
 		getgemvar=function() return mainmemory.read_u16_le(0x075860) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
@@ -119,16 +119,18 @@ local gamedata = {
 		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
 	},
 	['spyro1jntsc']={ 
-		-- Spyro the Dragon Japan [total gems, gem hud*, dragon post collect*]
+		-- Spyro the Dragon Japan [total gems, gem hud*, dragon pre/post collect*]
 		-- Gem var not set yet in HUD
+		-- Dragon var not get/set yet
 		getgemvar=function() return mainmemory.read_u16_le(0x07F3F0) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x07F3F0, value) end,
-		setgemhudvar=function(value) return mainmemory.write_u16_le(0x075860, value) end
+		setgemhudvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
+		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
 	},
 	['spyro2ntsc']={ 
 		-- Spyro 2 NTSC [total gems, gem hud, orb post collect]
-		-- No idea where the HUD value is stored, Orb global (0x06702C) is updated right before Orb is given
+		-- Orb global (0x06702C) is updated right before Orb is given, No idea where the HUD value is stored
 		getgemvar=function() return mainmemory.read_u16_le(0x0670CC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x06702C) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x0670CC, value) end,
@@ -138,7 +140,6 @@ local gamedata = {
 	['spyro3ntsc']={ 
 		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect]
 		-- Egg global updates the HUD, safe to set Global (0x06C740) and trigger with HUD (0x067410)
-		-- Issue, if HUD is still updating it'll trigger again... maybe just watch global :(
 		getgemvar=function() return mainmemory.read_u16_le(0x06C7FC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x067410) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x06C7FC, value) end,
@@ -182,33 +183,13 @@ function plugin.on_game_load(data, settings)
 	gt_maincollected = data.maincollected
 	gr_mainvarsetup = {get_collectable_ingametable (gt_maincollected,g_gamehash)}
 
-	console.log(gr_gemvarsetup[1])
-	console.log(gr_mainvarsetup[1])
-
-	-- Unused moved to function
-	-- -- 1 Get current game gem count from game table [gt_realcollectvar] (on swap)
-	-- if data.gemscollected[g_gamehash] ~= nil then
-	-- 	gt_realcollectvar = data.gemscollected[g_gamehash]
-	-- else
-	-- 	gt_realcollectvar = 0
-	-- end
-
-	-- Unused moved to function
-	-- -- 2 Add up current gem total from game table [g_totalcolvar] (on swap)
-	-- -- Add up total collect var so far
-	-- g_totalcolvar = 0
-	-- for key, value in pairs(data.gemscollected) do 
-	-- 	g_totalcolvar = g_totalcolvar + value
-	-- 	local gametag = data.tags[key]
-	-- 	console.log(gametag, value)
-	-- end
-	
 	--Debug
 	local gamename = gameinfo.getromname()
 	local gamehash = gameinfo.getromhash()
 	console.log('Game title', gamename)
 	console.log('Game hash', gamehash)
-
+	-- console.log(gr_gemvarsetup[1])
+	-- console.log(gr_mainvarsetup[1])
 end
 
 -- called each frame
@@ -234,9 +215,6 @@ function plugin.on_frame(data, settings)
 		local gdf_gemcollectvar = gamedata[g_tag].getgemvar()
 		local gdf_maincollectvar = gamedata[g_tag].getmainvar()
 
-		-- Unused moved to function
-		-- local f_collastframedelta = 0
-		-- f_colthisswap = 0
 		
 		-- Set cur var to game memory (not HUD)
 		-- Run before checking for collectable change, update last checked var
@@ -263,15 +241,9 @@ function plugin.on_frame(data, settings)
 		r_mainvarupdate = {update_collectable_frame(g_coldframe,gr_mainvarsetup[2],gdf_maincollectvar,gdf_mainlastcheckcollectvar)}
 
 
-		-- Unused moved to function
-		-- if g_coldframe >= 2 then 
-		-- 	f_collastframedelta = gdf_gemcollectvar - gdf_gemlastcheckcollectvar
-		-- 	f_colthisswap = gdf_gemcollectvar - g_totalcolvar	
-		-- end
-
 		-- Set HUD var count PER FRAME
 		-- Spyro 1 handles the HUD on a per level basis, handled in plug-in
-		-- 	Why does it count one extra??
+		-- Why does it count one extra??
 		-- Need to check multiple Spyro 1 tags
 		if g_tag == "spyro1ntsc" then
 			local f_newgemval = gr_gemvarsetup[2] + r_gemvarupdate[1] - 1
@@ -326,7 +298,6 @@ function plugin.on_game_save(data, settings)
 	
 	local newmainval = gr_mainvarsetup[1] + r_mainvarupdate[1]
 	data.maincollected[g_gamehash] = newmainval
-
 
 	-- Wait until swap total is updated before next swap var check
 	g_totalcurverset = false
