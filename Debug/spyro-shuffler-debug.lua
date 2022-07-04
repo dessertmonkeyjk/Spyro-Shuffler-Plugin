@@ -12,8 +12,8 @@ plugin.description =
 	*Version 07-04-2022*
 	**DEBUG VERSION! MAY BE UNSTABLE!**
 
-	Swaps games whenever a gem is collected in-game, as well as syncs gems across games.
-	Only gem total and hud are synced.
+	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
+	Only gem and dragon/orb/egg total + hud are synced.
 	
 	Currently supported
 
@@ -255,7 +255,7 @@ function plugin.on_frame(data, settings)
 		end
 		
 		-- Debug
-		gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_mainvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
 		
 	-- Run collect change check, delay so total collect change is set first
 		if g_coldframe >= 2 then
