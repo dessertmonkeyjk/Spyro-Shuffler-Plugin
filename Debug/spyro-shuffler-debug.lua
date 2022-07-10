@@ -18,7 +18,7 @@ plugin.description =
 	Currently supported
 
 	Spyro 1 NTSC
-	Spyro 1 NTSC (Japan)**
+	Spyro 1 NTSC (Japan)
 	Spryo 2 NTSC
 	Spyro 3 NTSC Greatest Hits
 
@@ -106,7 +106,7 @@ end
 local gamedata = {
 	['spyro1ntsc']={ 
 		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect]
-		-- HUD (0x077FCC) updates based on global value (0x075750), get Global var for trigger, set both
+		-- HUD (0x077FCC) updates based on global value (0x075750), get HUD var for trigger, set both
 		getgemvar=function() return mainmemory.read_u16_le(0x075860) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
@@ -114,11 +114,10 @@ local gamedata = {
 		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
 	},
 	['spyro1ntsc-j']={ 
-		-- Spyro the Dragon Japan [total gems, gem hud*, dragon pre/post collect*]
-		-- Gem var not set yet in HUD (need check for spyro 1 specific tags)
-		-- Dragon HUD (0x081DCC) updates based on global value (0x07F2C0), get Global var for trigger, set both
+		-- Spyro the Dragon Japan [total gems, gem hud, dragon pre/post collect]
+		-- Dragon HUD (0x081DCC) updates based on global value (0x07F2C0), get HUD var for trigger, set both
 		getgemvar=function() return mainmemory.read_u16_le(0x07F3F0) end,
-		getmainvar=function() return mainmemory.read_u16_le(0x07F2C0) end,
+		getmainvar=function() return mainmemory.read_u16_le(0x081DCC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x07F3F0, value) end,
 		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x081DC8, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x081DCC,value), mainmemory.write_u16_le(0x07F2C0,value) end
@@ -240,7 +239,7 @@ function plugin.on_frame(data, settings)
 		-- Spyro 1 handles the HUD on a per level basis, handled in plug-in
 		-- Why does it count one extra??
 		-- Need to check multiple Spyro 1 tags
-		if g_tag == "spyro1ntsc" then
+		if g_tag == "spyro1ntsc" or g_tag == "spyro1ntsc-j" then
 			local f_newgemval = gr_gemvarsetup[2] + r_gemvarupdate[1] - 1
 			if f_newgemval <= 0 then f_newgemval = 0 end
 			gamedata[g_tag].setgemhuds1var(f_newgemval)
