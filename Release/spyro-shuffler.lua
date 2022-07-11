@@ -9,7 +9,7 @@ plugin.settings = {
 
 plugin.description =
 [[
-	*Alpha Version, last updated 07-10-2022*
+	*Alpha v1.0.0, last updated 07-10-2022*
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Only gem and dragon/orb/egg total + hud are synced.
