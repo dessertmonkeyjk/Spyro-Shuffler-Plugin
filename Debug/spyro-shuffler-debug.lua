@@ -4,12 +4,12 @@ plugin.name = "Spyro Shuffler (Debug)"
 plugin.author = "dessertmonkeyjk"
 plugin.minversion = "2.6.2"
 plugin.settings = {
-	{ name='gemthreshold', type='number', label='Gems Swap Threshold', default=1 },
+	{ name='mainthreshold', type='number', label='Main Swap Threshold (dragon/orbs/eggs)', default=1 },
 }
 
 plugin.description =
 [[
-	*Version 07-10-2022*
+	*Alpha Version, last updated 07-10-2022*
 	**DEBUG VERSION! MAY BE UNSTABLE!**
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
@@ -149,7 +149,7 @@ function plugin.on_game_load(data, settings)
 	plugversion='07-10-2022'
 	g_gamehash = gameinfo.getromhash()
 	gt_coldstart = data.coldstart[g_gamehash]
-	us_gemthreshold = settings.gemthreshold
+	us_mainthreshold = settings.mainthreshold
 
 	-- Get current game data tag
 	--Set gamehash and game tag to game table
@@ -267,7 +267,7 @@ function plugin.on_frame(data, settings)
 		
 			-- If pre is higher than cur, swap, otherwise set pre to cur on next frame
 			-- Currrent check: Main var this swap
-			if r_mainvarupdate[1] >= us_gemthreshold and hudupdate == false then
+			if r_mainvarupdate[1] >= us_mainthreshold and hudupdate == false then
 				swap_game()
 			else
 				gdf_gemlastcheckcollectvar = gdf_gemcollectvar
@@ -278,7 +278,7 @@ end
 
 	-- Debug
 	gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
-	gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_gemthreshold),0xFFFFFFFF, 0xFF000000, 20)
+	gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
 	gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
 	gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
 end

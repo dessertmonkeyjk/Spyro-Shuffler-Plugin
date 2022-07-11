@@ -1,15 +1,15 @@
 local plugin = {}
 
-plugin.name = "Spyro Shuffler"
+plugin.name = "Spyro Shuffler (Alpha)"
 plugin.author = "dessertmonkeyjk"
 plugin.minversion = "2.6.2"
 plugin.settings = {
-	{ name='gemthreshold', type='number', label='Gems Swap Threshold', default=1 },
+	{ name='mainthreshold', type='number', label='Main Swap Threshold (dragon/orbs/eggs)', default=1 },
 }
 
 plugin.description =
 [[
-	*Version 07-04-2022*
+	*Alpha Version, last updated 07-10-2022*
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Only gem and dragon/orb/egg total + hud are synced.
@@ -23,22 +23,17 @@ plugin.description =
 
 	Code Ref
 	-gameinfo.getromname returns rom name
-	-frames_since_restart returns frames since last swap
-	-get_tag_from_hash_db returns tag, uses dat file to match key (hash) to name (value), returns tag (middle value)
+	-frames_since_restart returns frames since last swap (shuffler script function)
+	-get_tag_from_hash_db returns tag, uses dat file to match key (hash), returns tag (value), dat file contains comments (shuffler script function)
 
 	To-do
 	-Rework code so swap trigger & swap total can be set by user (gems, dragon/orb/egg)
-		-Push code for triggering based on collectable into function(s)
+		-Put code for triggering based on collectable into function(s)
 		-Put code for tracking collectables into function(s) 
-			1. **(on swap) Get static x collectable count for current game from game table
-			2. **(on swap) Add static total for all games x collectables from game table (for diff, HUD sync)
-			3. **(on update) Get x collectable delta PER FRAME and for current swap
 			4. (on update) Check for PER FRAME swap threshold (maybe x collected for swap as well but moneybags...)
 			5. (pre swap) Add new x collectable gotten to current game in game table
 	-Option to have trigger be x collected for current swap, prevent decrease of value by moneybags for trigger purposes
 	-Option to switch between x collected PER FRAME or for current swap
-	-Option to show total x collected on HUD (gems works, what about main collectable/lives?)
-
 ]]
 
 -- called once at the start
@@ -110,22 +105,21 @@ end
 local gamedata = {
 	['spyro1ntsc']={ 
 		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect]
-		-- HUD (0x077FCC) updates based on global value (0x075750), get Global var for trigger, set both
+		-- HUD (0x077FCC) updates based on global value (0x075750), get HUD var for trigger, set both
 		getgemvar=function() return mainmemory.read_u16_le(0x075860) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
 		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x077FC8, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
 	},
-	['spyro1jntsc']={ 
-		-- Spyro the Dragon Japan [total gems, gem hud*, dragon pre/post collect*]
-		-- Gem var not set yet in HUD
-		-- Dragon var not get/set yet
+	['spyro1ntsc-j']={ 
+		-- Spyro the Dragon Japan [total gems, gem hud, dragon pre/post collect]
+		-- Dragon HUD (0x081DCC) updates based on global value (0x07F2C0), get HUD var for trigger, set both
 		getgemvar=function() return mainmemory.read_u16_le(0x07F3F0) end,
-		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
+		getmainvar=function() return mainmemory.read_u16_le(0x081DCC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x07F3F0, value) end,
-		setgemhudvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
-		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
+		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x081DC8, value) end,
+		setmainvar=function(value) return mainmemory.write_u16_le(0x081DCC,value), mainmemory.write_u16_le(0x07F2C0,value) end
 	},
 	['spyro2ntsc']={ 
 		-- Spyro 2 NTSC [total gems, gem hud, orb post collect]
@@ -136,7 +130,7 @@ local gamedata = {
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067660, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06702C, value) end,
 	},
-	['spyro3ntsc']={ 
+	['spyro3ntsc1-1']={ 
 		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect]
 		-- Egg global updates the HUD, safe to set Global (0x06C740) and trigger with HUD (0x067410)
 		getgemvar=function() return mainmemory.read_u16_le(0x06C7FC) end,
@@ -151,10 +145,10 @@ local gamedata = {
 function plugin.on_game_load(data, settings)
 	
 	--Get global data
-	plugversion='07-04-2022'
+	plugversion='07-10-2022'
 	g_gamehash = gameinfo.getromhash()
 	gt_coldstart = data.coldstart[g_gamehash]
-	us_gemthreshold = settings.gemthreshold
+	us_mainthreshold = settings.mainthreshold
 
 	-- Get current game data tag
 	--Set gamehash and game tag to game table
@@ -244,7 +238,7 @@ function plugin.on_frame(data, settings)
 		-- Spyro 1 handles the HUD on a per level basis, handled in plug-in
 		-- Why does it count one extra??
 		-- Need to check multiple Spyro 1 tags
-		if g_tag == "spyro1ntsc" then
+		if g_tag == "spyro1ntsc" or g_tag == "spyro1ntsc-j" then
 			local f_newgemval = gr_gemvarsetup[2] + r_gemvarupdate[1] - 1
 			if f_newgemval <= 0 then f_newgemval = 0 end
 			gamedata[g_tag].setgemhuds1var(f_newgemval)
@@ -271,7 +265,8 @@ function plugin.on_frame(data, settings)
 			end
 		
 			-- If pre is higher than cur, swap, otherwise set pre to cur on next frame
-			if r_mainvarupdate[1] >= us_gemthreshold and hudupdate == false then
+			-- Currrent check: Main var this swap
+			if r_mainvarupdate[1] >= us_mainthreshold and hudupdate == false then
 				swap_game()
 			else
 				gdf_gemlastcheckcollectvar = gdf_gemcollectvar
@@ -282,7 +277,7 @@ end
 
 	-- Debug
 	gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
-	gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_gemthreshold),0xFFFFFFFF, 0xFF000000, 20)
+	gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
 	gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
 	gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
 end
