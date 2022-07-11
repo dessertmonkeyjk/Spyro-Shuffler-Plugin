@@ -19,6 +19,7 @@ The following games are supported by the plug-in:
 * Spyro: Year of the Dragon (NTSC - Greatest Hits)
 
 Additional game versions are planned to be added in the future.
+
 Demo and early prototypes are currently NOT planned to be added... for now.
 
 # Features
@@ -36,6 +37,7 @@ Additional collectables for both syncing and swapping are planned.
 You'll need to setup both Bizhawk 2.6.2 and Bizhawk Shuffler v2 before using this plugin.
 
 Download Bizhawk 2.6.2 here: https://tasvideos.org/BizHawk/ReleaseHistory#Bizhawk262
+
 Download Bizhawk Shuffler v2 here: https://github.com/authorblues/bizhawk-shuffler-2
 
 (Note that there are forked versions of Bizhawk Shuffler v2 that supports later versions of Bizhawk. This plugin has not been tested with such versions.)
