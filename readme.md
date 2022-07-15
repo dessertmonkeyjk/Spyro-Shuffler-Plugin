@@ -34,13 +34,15 @@ Additional collectables for both syncing and swapping are planned.
 
 # Setup & How to use
 
-You'll need to setup both Bizhawk 2.6.2 and Bizhawk Shuffler v2 before using this plugin.
+You'll need to setup both Bizhawk 2.6.2 and Bizhawk Shuffler v2 before using this plugin. Bizhawk 2.6.2 is the bare minimum that Bizhawk Shuffler v2 supports but newer versions of the script support later versions of the emulator.
 
-Download Bizhawk 2.6.2 here: https://tasvideos.org/BizHawk/ReleaseHistory#Bizhawk262
+Download Bizhawk: https://tasvideos.org/Bizhawk
 
-Download Bizhawk Shuffler v2 here: https://github.com/authorblues/bizhawk-shuffler-2
+Download Bizhawk Shuffler v2 (for Bizhawk 2.6.2 only): https://github.com/authorblues/bizhawk-shuffler-2
 
-(Note that there are forked versions of Bizhawk Shuffler v2 that supports later versions of Bizhawk. This plugin has not been tested with such versions.)
+OR
+
+Download kalumag's 2.6.3-compat branch of Bizhawk Shuffler v2 (for Bizhawk 2.6.3 or above): https://github.com/authorblues/bizhawk-shuffler-2/tree/2.6.3-compat
 
 1. Make sure you have both Bizhawk 2.6.2 configured (bios, controls, etc) and the Bizhawk Shuffler v2 lua script up and running.
 
