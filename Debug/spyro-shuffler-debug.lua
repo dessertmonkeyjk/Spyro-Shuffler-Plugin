@@ -9,8 +9,12 @@ plugin.settings = {
 
 plugin.description =
 [[
-	*Alpha v1.0.0, last updated 07-10-2022*
+	*Alpha v1.0.1, last updated 08-05-2022*
 	**DEBUG VERSION! MAY BE UNSTABLE!**
+
+	*Changelog 1.0.1*
+	Added levelidget for Spyro 1-3 and Spyro 1 Japan
+	Updated cold start detection to check level id to see if player is in-game
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Only gem and dragon/orb/egg total + hud are synced.
@@ -102,40 +106,49 @@ end
 -- Specific functions based on game tag, how to get/set values per game
 -- Get Global value, Trigger swap on HUD update
 -- Spyro 1 HUD defaults to level gems, can be set to total gems on HUD
--- * = not set yet
+-- * = not tested/supported yet
 local gamedata = {
 	['spyro1ntsc']={ 
-		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect]
+		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect, levelid]
 		-- HUD (0x077FCC) updates based on global value (0x075750), get HUD var for trigger, set both
+		-- Level ID range from 10 to 64 (first is hub, second is level)
 		getgemvar=function() return mainmemory.read_u16_le(0x075860) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
+		getlevelidvar=function() return mainmemory.read_u16_le(0x0758B4) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
 		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x077FC8, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
 	},
 	['spyro1ntsc-j']={ 
-		-- Spyro the Dragon Japan [total gems, gem hud, dragon pre/post collect]
+		-- Spyro the Dragon Japan [total gems, gem hud, dragon pre/post collect, levelid*]
 		-- Dragon HUD (0x081DCC) updates based on global value (0x07F2C0), get HUD var for trigger, set both
+		-- Level ID range from 10 to 64 (first is hub, second is level)
 		getgemvar=function() return mainmemory.read_u16_le(0x07F3F0) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x081DCC) end,
+		getlevelidvar=function() return mainmemory.read_u16_le(0x07F448) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x07F3F0, value) end,
 		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x081DC8, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x081DCC,value), mainmemory.write_u16_le(0x07F2C0,value) end
 	},
 	['spyro2ntsc']={ 
-		-- Spyro 2 NTSC [total gems, gem hud, orb post collect]
+		-- Spyro 2 NTSC [total gems, gem hud, orb post collect, levelid]
 		-- Orb global (0x06702C) is updated right before Orb is given, No idea where the HUD value is stored
+			-- (summer is 10-26, autumn is 30-46, etc), cutscenes start at id 70)
 		getgemvar=function() return mainmemory.read_u16_le(0x0670CC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x06702C) end,
+		getlevelidvar=function() return mainmemory.read_u16_le(0x066F90) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x0670CC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067660, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06702C, value) end,
 	},
 	['spyro3ntsc1-1']={ 
-		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect]
+		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect, levelid]
 		-- Egg global updates the HUD, safe to set Global (0x06C740) and trigger with HUD (0x067410)
+		-- Level ID range from 10 to 80+
+			-- (I assume it's similar to Spyro 1 but haven't tested fully, first level is hub, second is level, cutscenes start at id 61)
 		getgemvar=function() return mainmemory.read_u16_le(0x06C7FC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x067410) end,
+		getlevelidvar=function() return mainmemory.read_u16_le(0x06C69C) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x06C7FC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067368, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06C740,value) end
@@ -146,7 +159,7 @@ local gamedata = {
 function plugin.on_game_load(data, settings)
 	
 	--Get global data
-	plugversion='07-10-2022'
+	plugversion='08-05-2022'
 	g_gamehash = gameinfo.getromhash()
 	gt_coldstart = data.coldstart[g_gamehash]
 	us_mainthreshold = settings.mainthreshold
@@ -189,17 +202,31 @@ end
 -- called each frame
 function plugin.on_frame(data, settings)
 
-	--If cold start is true, assume false once gamedata value is at 0
+	--Old method for detecting cold start
+	-- if gt_coldstart == true then
+	-- 	if emu.framecount() >= 1600 then 
+	-- 		data.coldstart[g_gamehash] = false
+	-- 		gt_coldstart = data.coldstart[g_gamehash]
+			
+	-- 		console.log('Cold start is false')
+	-- 		return 	
+	-- 	end
+	-- end
+	
+	-- If cold start is true, check level id is within in-game range
+
 	if gt_coldstart == true then
-		if emu.framecount() >= 1600 then 
+		local f_levelid = gamedata[g_tag].getlevelidvar()
+		if f_levelid >= 10 and f_levelid <= 90 then 
 			data.coldstart[g_gamehash] = false
 			gt_coldstart = data.coldstart[g_gamehash]
 			
-			console.log('Cold start is false')
+			console.log('Now in-game, cold start is false')
 			return 	
 		end
 	end
-	
+
+
 	-- If cold start is false, then check if value increases afterwards
 	if gt_coldstart == false then
 
