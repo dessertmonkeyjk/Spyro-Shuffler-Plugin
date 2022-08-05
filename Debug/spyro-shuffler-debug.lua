@@ -3,21 +3,19 @@ local plugin = {}
 plugin.name = "Spyro Shuffler (Debug)"
 plugin.author = "dessertmonkeyjk"
 plugin.minversion = "2.6.2"
-plugin.settings = {
-	{ name='mainthreshold', type='number', label='Main Swap Threshold (dragon/orbs/eggs)', default=1 },
-}
 
 plugin.description =
 [[
-	*Alpha v1.0.1, last updated 08-05-2022*
 	**DEBUG VERSION! MAY BE UNSTABLE!**
+
+	*Alpha v1.0.1, last updated 08-05-2022*
 
 	---
 	*Changelog 1.0.1*
-	Added ability to get levelid for Spyro 1-3
+	Added ability to get levelid for Spyro 1-3 and Spyro 1 Japan
 	Updated cold start detection to check level id to see if player is in-game
-	Added ability to get life count (HUD, Global) for Spyro 1-3
-	Added ability to get health points for Spyro 1-3 (Spark levels may be different)
+	Added ability to get life count (HUD, Global) for Spyro 1-3 (not yet implemented)
+	Added ability to get health points for Spyro 1-3, excluding Sparks levels (not yet implemented)
 	---
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
@@ -45,10 +43,18 @@ plugin.description =
 	-Option to switch between x collected PER FRAME or for current swap
 ]]
 
+
+plugin.settings = {
+	{ name='mainthreshold', type='number', label='Main Swap Threshold (dragon/orbs/eggs)', default=1 },
+}
+
 -- called once at the start
 function plugin.on_setup(data, settings)
+	g_debugconsole = true
+	g_debugtext = true
+
 	gui.use_surface('client')
-	
+
 	data.tags = data.tags or {}
 	data.gemscollected = data.gemscollected or {}
 	data.maincollected = data.maincollected or {}
@@ -195,7 +201,7 @@ function plugin.on_game_load(data, settings)
 	end
 	
 	--Init first frame after cold start
-	g_totalcurverset = false
+	g_totalcurvarset = false
 	g_coldframe = 0
 	
 	-- Get collectable var from gametable for tracking
@@ -207,12 +213,13 @@ function plugin.on_game_load(data, settings)
 	gr_mainvarsetup = {get_collectable_ingametable (gt_maincollected,g_gamehash)}
 
 	--Debug
-	local gamename = gameinfo.getromname()
-	local gamehash = gameinfo.getromhash()
-	console.log('Game title', gamename)
-	console.log('Game hash', gamehash)
-	-- console.log(gr_gemvarsetup[1])
-	-- console.log(gr_mainvarsetup[1])
+	if 	g_debugconsole == true then
+		local gamename = gameinfo.getromname()
+		local gamehash = gameinfo.getromhash()
+		console.log('Game title', gamename)
+		console.log('Game hash', gamehash)
+		-- console.log('before total set in hud', g_totalcurvarset)
+	end
 end
 
 -- called each frame
@@ -237,7 +244,10 @@ function plugin.on_frame(data, settings)
 			data.coldstart[g_gamehash] = false
 			gt_coldstart = data.coldstart[g_gamehash]
 			
-			console.log('Now in-game, cold start is false')
+			if g_debugconsole == true then 
+				console.log('Now in-game, cold start is false') 
+			end
+
 			return 	
 		end
 	end
@@ -255,14 +265,18 @@ function plugin.on_frame(data, settings)
 		
 		-- Set cur var to game memory (not HUD)
 		-- Run before checking for collectable change, update last checked var
-		if g_totalcurverset == false then
+		if g_totalcurvarset == false then
 			gamedata[g_tag].setgemvar(gr_gemvarsetup[2])
 			gamedata[g_tag].setmainvar(gr_mainvarsetup[2])
-			
+
 			gdf_gemlastcheckcollectvar = gr_gemvarsetup[2]
 			gdf_mainlastcheckcollectvar = gr_mainvarsetup[2]
 
-			g_totalcurverset = true
+			g_totalcurvarset = true
+
+			if g_debugconsole == true then
+				console.log('Collectables set in HUD',g_totalcurvarset)
+			end
 		end
 
 		-- 3 Get diff between current game gem count 
@@ -292,7 +306,9 @@ function plugin.on_frame(data, settings)
 		end
 		
 		-- Debug
-		gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
+		if g_debugtext == true then
+			gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
+		end
 		
 	-- Run collect change check, delay so total collect change is set first
 		if g_coldframe >= 2 then
@@ -320,10 +336,12 @@ function plugin.on_frame(data, settings)
 end
 
 	-- Debug
-	gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
-	gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
-	gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
-	gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
+	if g_debugtext == true then
+		gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
+	end
 end
 
 -- called each time a game/state is saved (before swap)
@@ -338,13 +356,15 @@ function plugin.on_game_save(data, settings)
 	data.maincollected[g_gamehash] = newmainval
 
 	-- Wait until swap total is updated before next swap var check
-	g_totalcurverset = false
+	g_totalcurvarset = false
 	
 	-- Debug
-	local oldgemval = data.gemscollected[g_gamehash]
-	console.log('before set', g_totalcurverset)
-	-- console.log(oldgemval,r_gemvarupdate[2],newgemval)
-	-- console.log('---')
+	if g_debugconsole == true then
+		local oldgemval = data.gemscollected[g_gamehash]
+		console.log('Before totals set in HUD', g_totalcurvarset)
+		-- console.log(oldgemval,r_gemvarupdate[2],newgemval)
+		console.log('---')
+	end
 end
 
 -- called each time a game is marked complete
