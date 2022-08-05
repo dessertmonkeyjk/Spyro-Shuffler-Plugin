@@ -3,4 +3,6 @@ SystemID PSX
 07F2C0	d	u	0	MainRAM	Dragon Global
 081DCC	d	u	0	MainRAM	Dragon HUD
 081DC8	d	u	0	MainRAM	Gem HUD
+07F448	w	u	0	MainRAM	
+07F510	w	u	0	MainRAM	
 

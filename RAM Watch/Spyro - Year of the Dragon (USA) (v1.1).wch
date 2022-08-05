@@ -5,4 +5,9 @@ SystemID PSX
 067412	w	u	0	MainRAM	
 06C740	w	u	0	MainRAM	Egg Global
 067410	w	u	0	MainRAM	Egg HUD
+06C69C	w	u	0	MainRAM	level id current
+06C8A8	w	u	0	MainRAM	level id target
+0673BE	w	u	0	MainRAM	Lives Global
+0673BC	w	u	0	MainRAM	Lives HUD
+070688	w	u	0	MainRAM	Health points
 

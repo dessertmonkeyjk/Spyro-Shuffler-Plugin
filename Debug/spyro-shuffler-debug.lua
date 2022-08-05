@@ -12,9 +12,13 @@ plugin.description =
 	*Alpha v1.0.1, last updated 08-05-2022*
 	**DEBUG VERSION! MAY BE UNSTABLE!**
 
+	---
 	*Changelog 1.0.1*
-	Added levelidget for Spyro 1-3 and Spyro 1 Japan
+	Added ability to get levelid for Spyro 1-3
 	Updated cold start detection to check level id to see if player is in-game
+	Added ability to get life count (HUD, Global) for Spyro 1-3
+	Added ability to get health points for Spyro 1-3 (Spark levels may be different)
+	---
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Only gem and dragon/orb/egg total + hud are synced.
@@ -109,20 +113,23 @@ end
 -- * = not tested/supported yet
 local gamedata = {
 	['spyro1ntsc']={ 
-		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect, levelid]
+		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect, levelid, lives*, health*]
 		-- HUD (0x077FCC) updates based on global value (0x075750), get HUD var for trigger, set both
-		-- Level ID range from 10 to 64 (first is hub, second is level)
+		-- Lives HUD (0x077FD0) updates based on global value (0x07582C)
+		-- Health points (0x078BBC) range from 0-3 
+		-- Level ID current (0x0758B4) range from 10 to 64 (first is hub, second is level)
 		getgemvar=function() return mainmemory.read_u16_le(0x075860) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
 		getlevelidvar=function() return mainmemory.read_u16_le(0x0758B4) end,
+		getlivesvar=function() return mainmemory.read_u16_le(0x077FD0) end,
+		gethealthvar=function() return mainmemory.read_u16_le(0x078BBC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
 		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x077FC8, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
 	},
 	['spyro1ntsc-j']={ 
-		-- Spyro the Dragon Japan [total gems, gem hud, dragon pre/post collect, levelid*]
+		-- Spyro the Dragon Japan [total gems, gem hud, dragon pre/post collect, levelid*, lives*, health*]
 		-- Dragon HUD (0x081DCC) updates based on global value (0x07F2C0), get HUD var for trigger, set both
-		-- Level ID range from 10 to 64 (first is hub, second is level)
 		getgemvar=function() return mainmemory.read_u16_le(0x07F3F0) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x081DCC) end,
 		getlevelidvar=function() return mainmemory.read_u16_le(0x07F448) end,
@@ -131,24 +138,33 @@ local gamedata = {
 		setmainvar=function(value) return mainmemory.write_u16_le(0x081DCC,value), mainmemory.write_u16_le(0x07F2C0,value) end
 	},
 	['spyro2ntsc']={ 
-		-- Spyro 2 NTSC [total gems, gem hud, orb post collect, levelid]
+		-- Spyro 2 NTSC [total gems, gem hud, orb post collect, levelid, lives*, health*]
 		-- Orb global (0x06702C) is updated right before Orb is given, No idea where the HUD value is stored
-			-- (summer is 10-26, autumn is 30-46, etc), cutscenes start at id 70)
+		-- Lives HUD (0x067670) updates based on global value (0x06712C)
+		-- Health points (0x06A248) range from 0-3, set to high number on death
+		-- Level ID current (0x066F90) range from 10 to 100+ (first is hub, second is level)
+			-- (Unlike Spyro 1, hubs use up to 20 numbers, summer is 10-26, autumn is 30-46, etc), cutscenes start at id 70)
 		getgemvar=function() return mainmemory.read_u16_le(0x0670CC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x06702C) end,
 		getlevelidvar=function() return mainmemory.read_u16_le(0x066F90) end,
+		getlivesvar=function() return mainmemory.read_u16_le(0x067670) end,
+		gethealthvar=function() return mainmemory.read_u16_le(0x06A248) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x0670CC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067660, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06702C, value) end,
 	},
 	['spyro3ntsc1-1']={ 
-		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect, levelid]
+		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect, levelid, lives*, health*]
 		-- Egg global updates the HUD, safe to set Global (0x06C740) and trigger with HUD (0x067410)
-		-- Level ID range from 10 to 80+
+		-- Lives HUD (0x0673BC) updates based on global value (0x0673BE)
+		-- Health points (0x070688) range  from 0-4 , set to high number on death
+		-- Level ID current (0x06C69C) range from 10 to 80+
 			-- (I assume it's similar to Spyro 1 but haven't tested fully, first level is hub, second is level, cutscenes start at id 61)
 		getgemvar=function() return mainmemory.read_u16_le(0x06C7FC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x067410) end,
 		getlevelidvar=function() return mainmemory.read_u16_le(0x06C69C) end,
+		getlivesvar=function() return mainmemory.read_u16_le(0x0673BC) end,
+		gethealthvar=function() return mainmemory.read_u16_le(0x070688) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x06C7FC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067368, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06C740,value) end
