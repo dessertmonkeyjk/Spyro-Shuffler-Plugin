@@ -34,6 +34,10 @@ Additional collectables for both syncing and swapping are planned.
 
 # Setup & How to use
 
+Watch this handy video tutorial here:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/aUmPSJnvCAY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 You'll need to setup both Bizhawk 2.6.2 and Bizhawk Shuffler v2 before using this plugin. Bizhawk 2.6.2 is the bare minimum that Bizhawk Shuffler v2 supports but newer versions of the script support later versions of the emulator.
 
 Download Bizhawk: https://tasvideos.org/Bizhawk
