@@ -12,3 +12,7 @@ Currently, hard-coded to trigger when a main collectible is gotten by the player
 -Updated cold start detection to check level id to see if player is in-game
 -Added ability to get life count (HUD, Global) for Spyro 1-3 (not yet implemented)
 -Added ability to get health points for Spyro 1-3, excluding Sparks levels (not yet implemented)
+
+## Alpha v1.0.2
+
+-Added ability to track multiple instances of the same game

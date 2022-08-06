@@ -8,15 +8,8 @@ plugin.description =
 [[
 	**DEBUG VERSION! MAY BE UNSTABLE!**
 
-	*Alpha v1.0.1, last updated 08-05-2022*
+	*Alpha v1.0.2, last updated 08-06-2022*
 
-	---
-	*Changelog 1.0.1*
-	Added ability to get levelid for Spyro 1-3 and Spyro 1 Japan
-	Updated cold start detection to check level id to see if player is in-game
-	Added ability to get life count (HUD, Global) for Spyro 1-3 (not yet implemented)
-	Added ability to get health points for Spyro 1-3, excluding Sparks levels (not yet implemented)
-	---
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Only gem and dragon/orb/egg total + hud are synced.
@@ -56,6 +49,7 @@ function plugin.on_setup(data, settings)
 	gui.use_surface('client')
 
 	data.tags = data.tags or {}
+	data.gamefilename = data.gamefilename or {}
 	data.gemscollected = data.gemscollected or {}
 	data.maincollected = data.maincollected or {}
 	data.coldstart = data.coldstart or {}
@@ -181,8 +175,10 @@ local gamedata = {
 function plugin.on_game_load(data, settings)
 	
 	--Get global data
-	plugversion='08-05-2022'
-	g_gamehash = gameinfo.getromhash()
+	plugversion='08-06-2022'
+	--g_gamehash = gameinfo.getromhash()
+	g_gamehash = config.current_game
+
 	gt_coldstart = data.coldstart[g_gamehash]
 	us_mainthreshold = settings.mainthreshold
 
@@ -216,6 +212,8 @@ function plugin.on_game_load(data, settings)
 	if 	g_debugconsole == true then
 		local gamename = gameinfo.getromname()
 		local gamehash = gameinfo.getromhash()
+
+		--console.log('Current game in shuffle',g_gamehash)
 		console.log('Game title', gamename)
 		console.log('Game hash', gamehash)
 		-- console.log('before total set in hud', g_totalcurvarset)
@@ -307,7 +305,7 @@ function plugin.on_frame(data, settings)
 		
 		-- Debug
 		if g_debugtext == true then
-			gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
+			--gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
 		end
 		
 	-- Run collect change check, delay so total collect change is set first
@@ -338,8 +336,9 @@ end
 	-- Debug
 	if g_debugtext == true then
 		gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
-		gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
-		gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
+		--gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
+		--gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 25, string.format("Game instance: %s", g_gamehash),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
 	end
 end
