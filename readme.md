@@ -10,6 +10,32 @@ The plugin is currently in Alpha and is not yet feature complete.
 
 The plugin is functional but currently supports only specific games and version and has little user customization. It's been released as-is and may be very buggy in its current state. If you discover any bugs, add it as an issue to this github repo.
 
+# Setup & How to use
+
+Watch this handy video tutorial here:
+
+[![Spyro Shuffler tutorial](https://img.youtube.com/vi/aUmPSJnvCAY/sddefault.jpg)](https://www.youtube.com/watch?v=aUmPSJnvCAY)
+
+You'll need to setup both Bizhawk 2.6.2 and Bizhawk Shuffler v2 before using this plugin. Bizhawk 2.6.2 is the bare minimum that Bizhawk Shuffler v2 supports but newer versions of the script support later versions of the emulator.
+
+Download Bizhawk: https://tasvideos.org/Bizhawk
+
+Download Bizhawk Shuffler v2 (for Bizhawk 2.6.2 only): https://github.com/authorblues/bizhawk-shuffler-2
+
+OR
+
+Download kalumag's 2.6.3-compat branch of Bizhawk Shuffler v2 (for Bizhawk 2.6.3 or above): https://github.com/authorblues/bizhawk-shuffler-2/tree/2.6.3-compat
+
+1. Make sure you have both Bizhawk 2.6.2 configured (bios, controls, etc) and the Bizhawk Shuffler v2 lua script up and running.
+
+2. Place both the spyro-shuffler.lua and spyro-game-hashes.dat in Bizhawk Shuffler's plugins directory.
+
+3. In Bizhawk, go to Tools > Lua Console. In the Lua Console, go to Script > Open Script... and run the shuffler.lua script in the Bizhawk Shuffler folder.
+
+4. In the Bizhawk Shuffler v2 Setup dialog, click Setup Plugins and then activate the Spyro Shuffler plugin.
+
+5. Make sure you've added the needed files to the games folder for Bizhawk Shuffler. Finally click on Start New Session.
+
 # Supported games
 The following games are supported by the plug-in:
 
@@ -31,29 +57,3 @@ The plug-in does the following:
 * Triggers a game swap when a threshold is reached (Ex. gem collected is 5 or higher)
 
 Additional collectables for both syncing and swapping are planned.
-
-# Setup & How to use
-
-Watch this handy video tutorial here:
-
-[![Spyro Shuffler tutorial](https://img.youtube.com/vi/aUmPSJnvCAY/sddefault.jpg)](https://www.youtube.com/embed/aUmPSJnvCAY)
-
-You'll need to setup both Bizhawk 2.6.2 and Bizhawk Shuffler v2 before using this plugin. Bizhawk 2.6.2 is the bare minimum that Bizhawk Shuffler v2 supports but newer versions of the script support later versions of the emulator.
-
-Download Bizhawk: https://tasvideos.org/Bizhawk
-
-Download Bizhawk Shuffler v2 (for Bizhawk 2.6.2 only): https://github.com/authorblues/bizhawk-shuffler-2
-
-OR
-
-Download kalumag's 2.6.3-compat branch of Bizhawk Shuffler v2 (for Bizhawk 2.6.3 or above): https://github.com/authorblues/bizhawk-shuffler-2/tree/2.6.3-compat
-
-1. Make sure you have both Bizhawk 2.6.2 configured (bios, controls, etc) and the Bizhawk Shuffler v2 lua script up and running.
-
-2. Place both the spyro-shuffler.lua and spyro-game-hashes.dat in Bizhawk Shuffler's plugins directory.
-
-3. In Bizhawk, go to Tools > Lua Console. In the Lua Console, go to Script > Open Script... and run the shuffler.lua script in the Bizhawk Shuffler folder.
-
-4. In the Bizhawk Shuffler v2 Setup dialog, click Setup Plugins and then activate the Spyro Shuffler plugin.
-
-5. Make sure you've added the needed files to the games folder for Bizhawk Shuffler. Finally click on Start New Session.
