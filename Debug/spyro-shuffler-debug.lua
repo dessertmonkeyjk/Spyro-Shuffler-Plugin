@@ -7,9 +7,7 @@ plugin.minversion = "2.6.2"
 plugin.description =
 [[
 	**DEBUG VERSION! MAY BE UNSTABLE!**
-
 	*Alpha v1.0.2, last updated 08-06-2022*
-
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Only gem and dragon/orb/egg total + hud are synced.
@@ -49,7 +47,6 @@ function plugin.on_setup(data, settings)
 	gui.use_surface('client')
 
 	data.tags = data.tags or {}
-	data.gamefilename = data.gamefilename or {}
 	data.gemscollected = data.gemscollected or {}
 	data.maincollected = data.maincollected or {}
 	data.coldstart = data.coldstart or {}
@@ -213,7 +210,6 @@ function plugin.on_game_load(data, settings)
 		local gamename = gameinfo.getromname()
 		local gamehash = gameinfo.getromhash()
 
-		--console.log('Current game in shuffle',g_gamehash)
 		console.log('Game title', gamename)
 		console.log('Game hash', gamehash)
 		-- console.log('before total set in hud', g_totalcurvarset)
@@ -336,9 +332,9 @@ end
 	-- Debug
 	if g_debugtext == true then
 		gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
-		--gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
-		--gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
-		gui.drawText(10, 25, string.format("Game instance: %s", g_gamehash),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 85, string.format("Game instance: %s", g_gamehash),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
 	end
 end

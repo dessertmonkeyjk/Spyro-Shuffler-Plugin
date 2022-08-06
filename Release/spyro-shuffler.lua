@@ -6,15 +6,7 @@ plugin.minversion = "2.6.2"
 
 plugin.description =
 [[
-	*Alpha v1.0.1, last updated 08-05-2022*
-
-	---
-	*Changelog 1.0.1*
-	Added ability to get levelid for Spyro 1-3 and Spyro 1 Japan
-	Updated cold start detection to check level id to see if player is in-game
-	Added ability to get life count (HUD, Global) for Spyro 1-3 (not yet implemented)
-	Added ability to get health points for Spyro 1-3, excluding Sparks levels (not yet implemented)
-	---
+	*Alpha v1.0.2, last updated 08-06-2022*
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Only gem and dragon/orb/egg total + hud are synced.
@@ -26,6 +18,19 @@ plugin.description =
 	Spryo 2 NTSC
 	Spyro 3 NTSC Greatest Hits
 
+	Code Ref
+	-gameinfo.getromname returns rom name
+	-frames_since_restart returns frames since last swap (shuffler script function)
+	-get_tag_from_hash_db returns tag, uses dat file to match key (hash), returns tag (value), dat file contains comments (shuffler script function)
+
+	To-do
+	-Rework code so swap trigger & swap total can be set by user (gems, dragon/orb/egg)
+		-Put code for triggering based on collectable into function(s)
+		-Put code for tracking collectables into function(s) 
+			4. (on update) Check for PER FRAME swap threshold (maybe x collected for swap as well but moneybags...)
+			5. (pre swap) Add new x collectable gotten to current game in game table
+	-Option to have trigger be x collected for current swap, prevent decrease of value by moneybags for trigger purposes
+	-Option to switch between x collected PER FRAME or for current swap
 ]]
 
 
@@ -166,8 +171,10 @@ local gamedata = {
 function plugin.on_game_load(data, settings)
 	
 	--Get global data
-	plugversion='08-05-2022'
-	g_gamehash = gameinfo.getromhash()
+	plugversion='08-06-2022'
+	--g_gamehash = gameinfo.getromhash()
+	g_gamehash = config.current_game
+
 	gt_coldstart = data.coldstart[g_gamehash]
 	us_mainthreshold = settings.mainthreshold
 
@@ -201,6 +208,7 @@ function plugin.on_game_load(data, settings)
 	if 	g_debugconsole == true then
 		local gamename = gameinfo.getromname()
 		local gamehash = gameinfo.getromhash()
+
 		console.log('Game title', gamename)
 		console.log('Game hash', gamehash)
 		-- console.log('before total set in hud', g_totalcurvarset)
@@ -292,7 +300,7 @@ function plugin.on_frame(data, settings)
 		
 		-- Debug
 		if g_debugtext == true then
-			gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
+			--gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
 		end
 		
 	-- Run collect change check, delay so total collect change is set first
@@ -325,6 +333,7 @@ end
 		gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 85, string.format("Game instance: %s", g_gamehash),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
 	end
 end
