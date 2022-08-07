@@ -1,4 +1,7 @@
 # Spyro Shuffler
+
+![Spyro Shuffler banner](https://user-images.githubusercontent.com/5056978/183270373-80f8b425-5c13-4e61-b2cc-5f053bf64a9e.jpg)
+
 This is a plugin for Bizhawk Shuffler v2 for use with games featuring Spyro the Dragon.
 The plugin is designed mainly to swap games whenever a collectable is obtain by the player (gems, dragons, orbs, eggs, etc) but can also sync collectables between games.
 
@@ -57,3 +60,4 @@ The plug-in does the following:
 * Triggers a game swap when a threshold is reached (Ex. gem collected is 5 or higher)
 
 Additional collectables for both syncing and swapping are planned.
+
