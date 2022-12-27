@@ -8,11 +8,16 @@
 		"fsdeploy.nodes": [
 
 			{
-			"source":"D:/Users/Adam/Documents/Actual Documents/Projects/VSCode Projects/Bizhawk Shuffler/Spyro Shuffler Plugin/Debug/",
-			"target":"D:/Users/Adam/Documents/Actual Documents/Emulators/Programs/MultiEmu/BizHawk-2.8/Lua/bizhawk-shuffler-2-2.6.3-compat/plugins/",
-			"include":"**/*.*",
-			// "exclude":"**/min/*.*",
-			"deleteTargetOnDeploy": true,
+				"source":"Lua scripts/Debug",
+				"target":"D:/Users/Adam/Documents/Actual Documents/Emulators/Programs/MultiEmu/BizHawk-2.8/Lua/bizhawk-shuffler-2-2.6.3-compat/plugins/",
+				"include":"**/*.*",
+				"deleteTargetOnDeploy": true,
+			},
+			{
+				"source":"Lua scripts/Shared",
+				"target":"D:/Users/Adam/Documents/Actual Documents/Emulators/Programs/MultiEmu/BizHawk-2.8/Lua/bizhawk-shuffler-2-2.6.3-compat/plugins/",
+				"include":"**/*.*",
+				"deleteTargetOnDeploy": true,
 			}
 		],
 		"fsdeploy.deployOnSave": true

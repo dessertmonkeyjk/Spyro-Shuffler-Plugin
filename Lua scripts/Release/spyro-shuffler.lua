@@ -1,13 +1,12 @@
 local plugin = {}
 
-plugin.name = "Spyro Shuffler (Debug)"
+plugin.name = "Spyro Shuffler (Alpha)"
 plugin.author = "dessertmonkeyjk"
 plugin.minversion = "2.6.2"
 
 plugin.description =
 [[
-	**DEBUG VERSION! MAY BE UNSTABLE!**
-	*Alpha v1.0.2, last updated 08-06-2022*
+	*Alpha v1.0.2, last updated 08-06-2022*da
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Only gem and dragon/orb/egg total + hud are synced.
@@ -41,8 +40,8 @@ plugin.settings = {
 
 -- called once at the start
 function plugin.on_setup(data, settings)
-	g_debugconsole = true
-	g_debugtext = true
+	g_debugconsole = false
+	g_debugtext = false
 
 	gui.use_surface('client')
 
