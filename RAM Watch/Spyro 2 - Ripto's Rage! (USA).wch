@@ -2,7 +2,7 @@ SystemID PSX
 0670CC	d	u	0	MainRAM	Gem Global
 067660	d	u	0	MainRAM	Gem HUD
 06702C	w	u	0	MainRAM	Orb Global
-068182	w	u	0	MainRAM	
+067108	w	s	0	MainRAM	Talisman count
 066F90	w	u	0	MainRAM	level id current
 06715C	w	u	0	MainRAM	level id target
 06A248	w	u	0	MainRAM	Health points
