@@ -7,17 +7,20 @@ plugin.minversion = "2.6.2"
 plugin.description =
 [[
 	**DEBUG VERSION! MAY BE UNSTABLE!**
-	*Alpha v1.0.2, last updated 08-06-2022*da
+	*Alpha v1.0.3, last updated 09-02-2023*d
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
-	Only gem and dragon/orb/egg total + hud are synced.
+	Gem and dragon/orb/egg total + hud are synced. Health & Lives also sync.
 	
 	Currently supported
 
 	Spyro 1 NTSC
-	Spyro 1 NTSC (Japan)
+	Spyro 1 NTSC (Japan)*
 	Spryo 2 NTSC
+	Spryo 2 NTSC (Japan)
 	Spyro 3 NTSC Greatest Hits
+
+	* Lives/health may not sync, needs testing
 
 	Code Ref
 	-gameinfo.getromname returns rom name
@@ -26,6 +29,7 @@ plugin.description =
 
 	To-do
 	-Rework code so swap trigger & swap total can be set by user (gems, dragon/orb/egg)
+	-Set health and lives on swap
 		-Put code for triggering based on collectable into function(s)
 		-Put code for tracking collectables into function(s) 
 			4. (on update) Check for PER FRAME swap threshold (maybe x collected for swap as well but moneybags...)
@@ -49,6 +53,8 @@ function plugin.on_setup(data, settings)
 	data.tags = data.tags or {}
 	data.gemscollected = data.gemscollected or {}
 	data.maincollected = data.maincollected or {}
+	data.playerhealth = data.playerhealth or {}
+	data.playerlives = data.playerlives or {}
 	data.coldstart = data.coldstart or {}
 end
 
@@ -89,11 +95,11 @@ function get_collectable_ingametable (i_gametable,i_gameinstance)
 		o_gtcollectvar = 0
 	end
 
-	-- 2 Add up current col total from game table for ALL GAMES [g_totalcolvar] (on swap)
-	-- Add up total collect var so far
+	-- 2 Add up current col total from game table for game instance [g_totalcolvar] (on swap)
+	-- Add up total collect var so far for ALL GAMES
 
 	o_gttotalcollectvar = 0
-	
+
 	for key, value in pairs(i_gametable) do 
 		o_gttotalcollectvar = o_gttotalcollectvar + value
 		-- local gametag = data.tags[key]
@@ -106,10 +112,14 @@ end
 -- Specific functions based on game tag, how to get/set values per game
 -- Get Global value, Trigger swap on HUD update
 -- Spyro 1 HUD defaults to level gems, can be set to total gems on HUD
+-- Need to test
+	-- Health for Spyro 1, 2 US, 3 US GH
+	-- Lives for Spyro 1, 2 US, 3 US GH
+	-- Add health/lives for Spyro 1 Japan
 -- * = not tested/supported yet
 local gamedata = {
 	['spyro1ntsc']={ 
-		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect, levelid, lives*, health*]
+		-- Spyro the Dragon NTSC [total gems, gem hud, dragon pre/post collect, levelid, lives, health*]
 		-- HUD (0x077FCC) updates based on global value (0x075750), get HUD var for trigger, set both
 		-- Lives HUD (0x077FD0) updates based on global value (0x07582C)
 		-- Health points (0x078BBC) range from 0-3 
@@ -117,11 +127,13 @@ local gamedata = {
 		getgemvar=function() return mainmemory.read_u16_le(0x075860) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x077FCC) end,
 		getlevelidvar=function() return mainmemory.read_u16_le(0x0758B4) end,
-		getlivesvar=function() return mainmemory.read_u16_le(0x077FD0) end,
+		getlivesvar=function() return mainmemory.read_u16_le(0x07582C) end,
 		gethealthvar=function() return mainmemory.read_u16_le(0x078BBC) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x075860, value) end,
 		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x077FC8, value) end,
-		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end
+		setmainvar=function(value) return mainmemory.write_u16_le(0x077FCC,value), mainmemory.write_u16_le(0x075750,value) end,
+		sethealthvar=function(value) return mainmemory.write_u16_le(0x078BBC, value) end,
+		setlivesvar=function(value) return mainmemory.write_u16_le(0x07582C, value) end
 	},
 	['spyro1ntsc-j']={ 
 		-- Spyro the Dragon Japan [total gems, gem hud, dragon pre/post collect, levelid*, lives*, health*]
@@ -133,24 +145,44 @@ local gamedata = {
 		setgemhuds1var=function(value) return mainmemory.write_u16_le(0x081DC8, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x081DCC,value), mainmemory.write_u16_le(0x07F2C0,value) end
 	},
+	['spyro2ntsc-j']={ 
+		-- Spyro 2 NTSC Japan [total gems, gem hud, orb post collect, levelid, lives, health]
+		-- Orb global (0x06974C) is updated right before Orb is given, No idea where the HUD value is stored
+		-- Lives HUD (0x069DA0) updates based on global value (0x069850)
+		-- Health points (0x06CE04) range from 0-3, set to high number on death
+		-- Level ID current (0x0696AC) range from 10 to 100+ (first is hub, second is level)
+			-- (Unlike Spyro 1, hubs use up to 20 numbers, summer is 10-26, autumn is 30-46, etc), cutscenes start at id 70)
+		getgemvar=function() return mainmemory.read_u16_le(0x0697F0) end,
+		getmainvar=function() return mainmemory.read_u16_le(0x06974C) end,
+		getlevelidvar=function() return mainmemory.read_u16_le(0x0696AC) end,
+		getlivesvar=function() return mainmemory.read_u16_le(0x069850) end,
+		gethealthvar=function() return mainmemory.read_u16_le(0x06CE04) end,
+		setgemvar=function(value) return mainmemory.write_u16_le(0x0697F0, value) end,
+		setgemhudvar=function(value) return mainmemory.write_u16_le(0x069D90, value) end,
+		setmainvar=function(value) return mainmemory.write_u16_le(0x06974C, value) end,
+		sethealthvar=function(value) return mainmemory.write_u16_le(0x06CE04, value) end,
+		setlivesvar=function(value) return mainmemory.write_u16_le(0x069850, value) end
+	},
 	['spyro2ntsc']={ 
-		-- Spyro 2 NTSC [total gems, gem hud, orb post collect, levelid, lives*, health*]
+		-- Spyro 2 NTSC [total gems, gem hud, orb post collect, levelid, lives, health]
 		-- Orb global (0x06702C) is updated right before Orb is given, No idea where the HUD value is stored
-		-- Lives HUD (0x067670) updates based on global value (0x06712C)
-		-- Health points (0x06A248) range from 0-3, set to high number on death
+		-- *Lives HUD (0x067670) updates based on global value (0x06712C)
+		-- *Health points (0x06A248) range from 0-3, set to high number on death
 		-- Level ID current (0x066F90) range from 10 to 100+ (first is hub, second is level)
 			-- (Unlike Spyro 1, hubs use up to 20 numbers, summer is 10-26, autumn is 30-46, etc), cutscenes start at id 70)
 		getgemvar=function() return mainmemory.read_u16_le(0x0670CC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x06702C) end,
 		getlevelidvar=function() return mainmemory.read_u16_le(0x066F90) end,
-		getlivesvar=function() return mainmemory.read_u16_le(0x067670) end,
+		getlivesvar=function() return mainmemory.read_u16_le(0x06712C) end,
 		gethealthvar=function() return mainmemory.read_u16_le(0x06A248) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x0670CC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067660, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06702C, value) end,
+		sethealthvar=function(value) return mainmemory.write_u16_le(0x06A248, value) end,
+		setlivesvar=function(value) return mainmemory.write_u16_le(0x06712C, value) end
 	},
 	['spyro3ntsc1-1']={ 
-		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect, levelid, lives*, health*]
+		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect, levelid, lives, health]
 		-- Egg global updates the HUD, safe to set Global (0x06C740) and trigger with HUD (0x067410)
 		-- Lives HUD (0x0673BC) updates based on global value (0x0673BE)
 		-- Health points (0x070688) range  from 0-4 , set to high number on death
@@ -159,11 +191,13 @@ local gamedata = {
 		getgemvar=function() return mainmemory.read_u16_le(0x06C7FC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x067410) end,
 		getlevelidvar=function() return mainmemory.read_u16_le(0x06C69C) end,
-		getlivesvar=function() return mainmemory.read_u16_le(0x0673BC) end,
+		getlivesvar=function() return mainmemory.read_u16_le(0x0673BE) end,
 		gethealthvar=function() return mainmemory.read_u16_le(0x070688) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x06C7FC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067368, value) end,
-		setmainvar=function(value) return mainmemory.write_u16_le(0x06C740,value) end
+		setmainvar=function(value) return mainmemory.write_u16_le(0x06C740,value) end,
+		sethealthvar=function(value) return mainmemory.write_u16_le(0x070688, value) end,
+		setlivesvar=function(value) return mainmemory.write_u16_le(0x0673BE, value) end
 	}
 }
 
@@ -171,7 +205,7 @@ local gamedata = {
 function plugin.on_game_load(data, settings)
 	
 	--Get global data
-	plugversion='02-06-2023'
+	plugversion='09-02-2023'
 	g_gameinstance = config.current_game
 	gt_coldstart = data.coldstart[g_gameinstance]
 	us_mainthreshold = settings.mainthreshold
@@ -202,13 +236,25 @@ function plugin.on_game_load(data, settings)
 	gt_maincollected = data.maincollected
 	gr_mainvarsetup = {get_collectable_ingametable (gt_maincollected,g_gameinstance)}
 
+	-- Get health and lives value, set if not empty
+	gt_playerhealth = data.playerhealth[g_prevgameinstance]
+	gt_playerlives = data.playerlives[g_prevgameinstance]
+	if data.playerhealth[g_prevgameinstance] ~= nil then 
+		gamedata[g_tag].sethealthvar(gt_playerhealth)
+		gamedata[g_tag].setlivesvar(gt_playerlives)
+	end
+
 	--Debug
 	if 	g_debugconsole == true then
 		local gamename = gameinfo.getromname()
 		local gamehash = gameinfo.getromhash()
+		local playerhealth = gt_playerhealth
+		local playerlives = gt_playerlives
 
 		console.log('Game title', gamename)
 		console.log('Game hash', gamehash)
+		console.log('Game health', playerhealth)
+		console.log('Game lives', playerlives)
 		-- console.log('before total set in hud', g_totalcurvarset)
 	end
 end
@@ -217,12 +263,18 @@ end
 function plugin.on_frame(data, settings)
 
 	-- If cold start is true, check level id is within in-game range
+	-- Set any values that don't need updating after cold start (lives, health, etc.)
 
 	if gt_coldstart == true then
 		local f_levelid = gamedata[g_tag].getlevelidvar()
 		if f_levelid >= 10 and f_levelid <= 90 then 
 			data.coldstart[g_gameinstance] = false
 			gt_coldstart = data.coldstart[g_gameinstance]
+
+			if gt_playerhealth ~= nil then 
+				gamedata[g_tag].sethealthvar(gt_playerhealth)
+				gamedata[g_tag].setlivesvar(gt_playerlives)
+			end
 			
 			if g_debugconsole == true then 
 				console.log('Now in-game, cold start is false') 
@@ -258,6 +310,8 @@ function plugin.on_frame(data, settings)
 				console.log('Collectables set in HUD',g_totalcurvarset)
 			end
 		end
+
+
 
 		-- 3 Get diff between current game gem count 
 		-- and total gem count from game table [f_colthisswap] (on update)
@@ -330,6 +384,9 @@ end
 -- called each time a game/state is saved (before swap)
 function plugin.on_game_save(data, settings)
 	
+	--Save instance var for next game to fetch
+	g_prevgameinstance = config.current_game
+	
 	-- Add last gem total from game data table and gems collected this swap, add back into table
 	-- 4 Add diff gems to REAL gem count (pre-swap)
 	local newgemval = gr_gemvarsetup[1] + r_gemvarupdate[1]
@@ -337,6 +394,16 @@ function plugin.on_game_save(data, settings)
 	
 	local newmainval = gr_mainvarsetup[1] + r_mainvarupdate[1]
 	data.maincollected[g_gameinstance] = newmainval
+
+	-- Update player health, lives to table, cap at three if player is dead on swap
+	local newhealthval = gamedata[g_tag].gethealthvar()
+	local newlivesval = gamedata[g_tag].getlivesvar()
+	if newhealthval > 3 then
+		newhealthval = 3
+	end
+	data.playerhealth[g_gameinstance] = newhealthval
+	data.playerlives[g_gameinstance] = newlivesval
+
 
 	-- Wait until swap total is updated before next swap var check
 	g_totalcurvarset = false
