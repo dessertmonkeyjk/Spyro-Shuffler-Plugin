@@ -29,8 +29,8 @@ plugin.description =
 
 	To-do
 	-Rework code so swap trigger & swap total can be set by user (gems, dragon/orb/egg)
-	-Set health and lives on swap
-	!! Bug caused when player is healed while dying, causing a softlock !!
+	-Add delay on player hit
+	!! Bug caused when player is healed while dying, causing a softlock until the music ends!!
 		-Put code for triggering based on collectable into function(s)
 		-Put code for tracking collectables into function(s) 
 			4. (on update) Check for PER FRAME swap threshold (maybe x collected for swap as well but moneybags...)
@@ -113,6 +113,11 @@ function get_collectable_ingametable (i_gametable,i_gameinstance)
 	return o_gtcollectvar, o_gttotalcollectvar
 end
 
+function get_delay_frame (i_currentframe, i_offset)
+	o_delayframe = i_currentframe + i_offset
+
+	return o_delayframe
+end
 -- Specific functions based on game tag, how to get/set values per game
 -- Get Global value, Trigger swap on HUD update
 -- Spyro 1 HUD defaults to level gems, can be set to total gems on HUD
@@ -166,10 +171,11 @@ local gamedata = {
 		setlivesvar=function(value) return mainmemory.write_u16_le(0x069850, value) end
 	},
 	['spyro2ntsc']={ 
-		-- Spyro 2 NTSC [total gems, gem hud, orb post collect, levelid, lives, health]
+		-- Spyro 2 NTSC [total gems, gem hud, orb post collect, talismans, levelid, lives, health]
 		-- Orb global (0x06702C) is updated right before Orb is given, No idea where the HUD value is stored
-		-- *Lives HUD (0x067670) updates based on global value (0x06712C)
-		-- *Health points (0x06A248) range from 0-3, set to high number on death
+		-- Lives HUD (0x067670) updates based on global value (0x06712C)
+		-- Health points (0x06A248) range from 0-3, set to high number on death
+		-- Spyro 2 Talismans count (0x067108) updates when one is collected, specific to this game 
 		-- Level ID current (0x066F90) range from 10 to 100+ (first is hub, second is level)
 			-- (Unlike Spyro 1, hubs use up to 20 numbers, summer is 10-26, autumn is 30-46, etc), cutscenes start at id 70)
 		getgemvar=function() return mainmemory.read_u16_le(0x0670CC) end,
@@ -177,6 +183,7 @@ local gamedata = {
 		getlevelidvar=function() return mainmemory.read_u16_le(0x066F90) end,
 		getlivesvar=function() return mainmemory.read_u16_le(0x06712C) end,
 		gethealthvar=function() return mainmemory.read_u16_le(0x06A248) end,
+		gettalismanvar=function() return mainmemory.read_u16_le(0x067108) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x0670CC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067660, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06702C, value) end,
@@ -184,10 +191,11 @@ local gamedata = {
 		setlivesvar=function(value) return mainmemory.write_u16_le(0x06712C, value) end
 	},
 	['spyro3ntsc1-1']={ 
-		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect, levelid, lives, health]
+		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect, talismans*, levelid, lives, health]
 		-- Egg global updates the HUD, safe to set Global (0x06C740) and trigger with HUD (0x067410)
 		-- Lives HUD (0x0673BC) updates based on global value (0x0673BE)
 		-- Health points (0x070688) range  from 0-4 , set to high number on death
+		-- *Spyro 2 Talismans count (0x067108) updates when one is collected, specific to this game 
 		-- Level ID current (0x06C69C) range from 10 to 80+
 			-- (I assume it's similar to Spyro 1 but haven't tested fully, first level is hub, second is level, cutscenes start at id 61)
 		getgemvar=function() return mainmemory.read_u16_le(0x06C7FC) end,
@@ -195,6 +203,7 @@ local gamedata = {
 		getlevelidvar=function() return mainmemory.read_u16_le(0x06C69C) end,
 		getlivesvar=function() return mainmemory.read_u16_le(0x0673BE) end,
 		gethealthvar=function() return mainmemory.read_u16_le(0x070688) end,
+		gettalismanvar=function() return mainmemory.read_u16_le(0x067108) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x06C7FC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067368, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06C740,value) end,
@@ -237,6 +246,12 @@ function plugin.on_game_load(data, settings)
 
 	gt_maincollected = data.maincollected
 	gr_mainvarsetup = {get_collectable_ingametable (gt_maincollected,g_gameinstance)}
+
+	if g_tag == "spyro2ntsc" then
+		gt_s2talismans = gamedata[g_tag].gettalismanvar()
+	end
+
+
 
 	-- Get health and lives value, set if not empty
 	gt_playerhealth = data.playerhealth[g_prevgameinstance]
@@ -298,6 +313,11 @@ function plugin.on_frame(data, settings)
 		local gdf_playerlives = gamedata[g_tag].getlivesvar()
 		local gdf_playerhealth = gamedata[g_tag].gethealthvar()
 
+		-- Spyro 2 talismans when Spyro 2 is detected
+		if g_tag == "spyro2ntsc" then
+			gdf_s2talismans = gamedata[g_tag].gettalismanvar()
+		end
+
 		
 		-- Set cur var to game memory (not HUD)
 		-- Initalizes previous frame collectable values
@@ -309,6 +329,12 @@ function plugin.on_frame(data, settings)
 			gdf_mainlastcheckcollectvar = gr_mainvarsetup[2]
 			gdf_playerhealthlastcheckvar = gdf_playerhealth
 			gdf_playerliveslastcheckvar = gdf_playerlives
+
+			if g_tag == "spyro2ntsc" then
+				gdf_s2talismanslastcheckvar = gdf_s2talismans
+				console.log('S2 Talismans',gdf_s2talismanslastcheckvar)
+			end
+
 
 			g_totalcurvarset = true
 
@@ -365,7 +391,14 @@ function plugin.on_frame(data, settings)
 			else
 				hudupdate = false
 			end
-		
+				-- Spyro 2 talismans when Spyro 2 is detected
+				if g_tag == "spyro2ntsc" then
+					if gdf_s2talismans > gdf_s2talismanslastcheckvar then
+						swap_game()
+					else
+						gdf_s2talismanslastcheckvar = gdf_s2talismans
+					end
+				end
 			--Trigger for when player is damaged and/or dies
 			if us_swapondamage == true then
 				-- Check when player can take a hit and live
@@ -392,12 +425,18 @@ function plugin.on_frame(data, settings)
 				gdf_gemlastcheckcollectvar = gdf_gemcollectvar
 				gdf_mainlastcheckcollectvar = gdf_maincollectvar
 			end
+
+
+
 		end
 end
 
 	-- Debug
 	if g_debugtext == true then
-		-- gui.drawText(10, 5, string.format("Player health: %d", gdf_playerhealthlastcheckvar), 0xFFFFFFFF, 0xFF000000, 20)
+
+		if gdf_playerhealthlastcheckvar == nil then gdf_playerhealthlastcheckvar = 0 end
+
+		gui.drawText(10, 5, string.format("Player health: %d", gdf_playerhealthlastcheckvar), 0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 85, string.format("Game instance: %s", g_gameinstance),0xFFFFFFFF, 0xFF000000, 20)
