@@ -7,7 +7,7 @@ plugin.minversion = "2.6.2"
 plugin.description =
 [[
 	**DEBUG VERSION! MAY BE UNSTABLE!**
-	*Alpha v1.0.3, last updated 09-02-2023*d
+	*Alpha v1.0.3, last updated 09-02-2023*
 
 	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
 	Gem and dragon/orb/egg total + hud are synced. Health & Lives also sync.
@@ -30,6 +30,7 @@ plugin.description =
 	To-do
 	-Rework code so swap trigger & swap total can be set by user (gems, dragon/orb/egg)
 	-Set health and lives on swap
+	!! Bug caused when player is healed while dying, causing a softlock !!
 		-Put code for triggering based on collectable into function(s)
 		-Put code for tracking collectables into function(s) 
 			4. (on update) Check for PER FRAME swap threshold (maybe x collected for swap as well but moneybags...)
@@ -41,12 +42,15 @@ plugin.description =
 
 plugin.settings = {
 	{ name='mainthreshold', type='number', label='Main Swap Threshold (dragon/orbs/eggs)', default=1 },
+	{ name='swapwhendamaged', type='boolean', label='Swap when player is damaged', default=1 }
 }
 
 -- called once at the start
 function plugin.on_setup(data, settings)
 	g_debugconsole = true
 	g_debugtext = true
+
+	us_swapondamage = settings.swapwhendamaged
 
 	gui.use_surface('client')
 
@@ -113,8 +117,6 @@ end
 -- Get Global value, Trigger swap on HUD update
 -- Spyro 1 HUD defaults to level gems, can be set to total gems on HUD
 -- Need to test
-	-- Health for Spyro 1, 2 US, 3 US GH
-	-- Lives for Spyro 1, 2 US, 3 US GH
 	-- Add health/lives for Spyro 1 Japan
 -- * = not tested/supported yet
 local gamedata = {
@@ -285,7 +287,7 @@ function plugin.on_frame(data, settings)
 	end
 
 
-	-- If cold start is false, then check if value increases afterwards
+	-- If cold start is false, then check if collectable value increases afterwards
 	if gt_coldstart == false then
 
 		-- Use global var for game data from load fn (gd_curcollectvar, g_tag)
@@ -293,16 +295,20 @@ function plugin.on_frame(data, settings)
 
 		local gdf_gemcollectvar = gamedata[g_tag].getgemvar()
 		local gdf_maincollectvar = gamedata[g_tag].getmainvar()
+		local gdf_playerlives = gamedata[g_tag].getlivesvar()
+		local gdf_playerhealth = gamedata[g_tag].gethealthvar()
 
 		
 		-- Set cur var to game memory (not HUD)
-		-- Run before checking for collectable change, update last checked var
+		-- Initalizes previous frame collectable values
 		if g_totalcurvarset == false then
 			gamedata[g_tag].setgemvar(gr_gemvarsetup[2])
 			gamedata[g_tag].setmainvar(gr_mainvarsetup[2])
 
 			gdf_gemlastcheckcollectvar = gr_gemvarsetup[2]
 			gdf_mainlastcheckcollectvar = gr_mainvarsetup[2]
+			gdf_playerhealthlastcheckvar = gdf_playerhealth
+			gdf_playerliveslastcheckvar = gdf_playerlives
 
 			g_totalcurvarset = true
 
@@ -346,9 +352,9 @@ function plugin.on_frame(data, settings)
 			--gui.drawText(10, 45, string.format("Gems collect for swap: %d", r_gemvarupdate[1]),0xFFFFFFFF, 0xFF000000, 20)
 		end
 		
-	-- Run collect change check, delay so total collect change is set first
+	-- Swap trigger check
 		if g_coldframe >= 2 then
-
+			-- Run collectable change check, delay so total collect change is set first
 			-- Wait until HUD shows total before checking
 			-- Check current val is not equal to total, and collected this swap is 0
 			-- CANNOT BE PER FRAME FOR MAIN COLLECTABLES OR IT'LL SET IT OFF
@@ -360,6 +366,24 @@ function plugin.on_frame(data, settings)
 				hudupdate = false
 			end
 		
+			--Trigger for when player is damaged and/or dies
+			if us_swapondamage == true then
+				-- Check when player can take a hit and live
+				if gdf_playerhealth >= 0 and gdf_playerhealth <= 4 then
+					if gdf_playerhealth < gdf_playerhealthlastcheckvar then
+						swap_game()
+					else
+						gdf_playerhealthlastcheckvar = gdf_playerhealth
+					end
+				end
+				-- Check when player dies and loses a life
+				if gdf_playerlives < gdf_playerliveslastcheckvar then
+					swap_game()
+				else
+					gdf_playerliveslastcheckvar = gdf_playerlives
+				end
+			end
+
 			-- If pre is higher than cur, swap, otherwise set pre to cur on next frame
 			-- Currrent check: Main var this swap
 			if r_mainvarupdate[1] >= us_mainthreshold and hudupdate == false then
@@ -373,7 +397,7 @@ end
 
 	-- Debug
 	if g_debugtext == true then
-		gui.drawText(10, 5, string.format("Macguffin collected: %d", gr_mainvarsetup[2]), 0xFFFFFFFF, 0xFF000000, 20)
+		-- gui.drawText(10, 5, string.format("Player health: %d", gdf_playerhealthlastcheckvar), 0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 85, string.format("Game instance: %s", g_gameinstance),0xFFFFFFFF, 0xFF000000, 20)
