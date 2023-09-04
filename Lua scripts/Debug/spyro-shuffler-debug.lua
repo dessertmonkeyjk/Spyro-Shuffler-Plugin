@@ -7,9 +7,9 @@ plugin.minversion = "2.6.2"
 plugin.description =
 [[
 	**DEBUG VERSION! MAY BE UNSTABLE!**
-	*Alpha v1.0.3, last updated 09-02-2023*
+	*Alpha v1.0.3, last updated 09-04-2023*
 
-	Swaps games whenever something is collected in-game, as well as syncs collectables across games.
+	Swaps games whenever something is collected in-game or the player is hit, as well as syncs collectables across games.
 	Gem and dragon/orb/egg total + hud are synced. Health & Lives also sync.
 	
 	Currently supported
@@ -17,10 +17,10 @@ plugin.description =
 	Spyro 1 NTSC
 	Spyro 1 NTSC (Japan)*
 	Spryo 2 NTSC
-	Spryo 2 NTSC (Japan)
+	Spryo 2 NTSC (Japan)*
 	Spyro 3 NTSC Greatest Hits
 
-	* Lives/health may not sync, needs testing
+	* Lives/health and talismans not yet implemented
 
 	Code Ref
 	-gameinfo.getromname returns rom name
@@ -48,7 +48,7 @@ plugin.settings = {
 -- called once at the start
 function plugin.on_setup(data, settings)
 	g_debugconsole = true
-	g_debugtext = true
+	g_debugtext = false
 
 	us_swapondamage = settings.swapwhendamaged
 
@@ -216,7 +216,7 @@ local gamedata = {
 function plugin.on_game_load(data, settings)
 	
 	--Get global data
-	plugversion='09-03-2023'
+	plugversion='09-04-2023'
 	g_gameinstance = config.current_game
 	gt_coldstart = data.coldstart[g_gameinstance]
 	us_mainthreshold = settings.mainthreshold

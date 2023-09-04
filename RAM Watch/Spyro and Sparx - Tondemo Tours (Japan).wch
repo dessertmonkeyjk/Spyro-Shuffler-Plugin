@@ -2,4 +2,8 @@ SystemID PSX
 0697F0	d	u	0	MainRAM	Gem Global
 069D90	d	u	0	MainRAM	Gem HUD
 06974C	d	u	0	MainRAM	Orb Global
+06CE04	b	u	0	MainRAM	Health
+0696AC	w	u	0	MainRAM	Level id
+069850	b	u	0	MainRAM	Lives Global
+069DA0	b	u	0	MainRAM	Lives HUD
 
