@@ -193,7 +193,7 @@ local gamedata = {
 	['spyro3ntsc1-1']={ 
 		-- Spyro: Year of the Dragon NTSC [total gems, gem hud, egg post collect, talismans*, levelid, lives, health]
 		-- Egg global updates the HUD, safe to set Global (0x06C740) and trigger with HUD (0x067410)
-		-- Lives HUD (0x0673BC) updates based on global value (0x0673BE)
+		-- Lives HUD (0x0673BC) updates based on global value (0x06C864)
 		-- Health points (0x070688) range  from 0-4 , set to high number on death
 		-- *Spyro 2 Talismans count (0x067108) updates when one is collected, specific to this game 
 		-- Level ID current (0x06C69C) range from 10 to 80+
@@ -201,14 +201,14 @@ local gamedata = {
 		getgemvar=function() return mainmemory.read_u16_le(0x06C7FC) end,
 		getmainvar=function() return mainmemory.read_u16_le(0x067410) end,
 		getlevelidvar=function() return mainmemory.read_u16_le(0x06C69C) end,
-		getlivesvar=function() return mainmemory.read_u16_le(0x0673BE) end,
+		getlivesvar=function() return mainmemory.read_u16_le(0x06C864) end,
 		gethealthvar=function() return mainmemory.read_u16_le(0x070688) end,
 		gettalismanvar=function() return mainmemory.read_u16_le(0x067108) end,
 		setgemvar=function(value) return mainmemory.write_u16_le(0x06C7FC, value) end,
 		setgemhudvar=function(value) return mainmemory.write_u16_le(0x067368, value) end,
 		setmainvar=function(value) return mainmemory.write_u16_le(0x06C740,value) end,
 		sethealthvar=function(value) return mainmemory.write_u16_le(0x070688, value) end,
-		setlivesvar=function(value) return mainmemory.write_u16_le(0x0673BE, value) end
+		setlivesvar=function(value) return mainmemory.write_u16_le(0x06C864, value) end
 	}
 }
 
@@ -216,7 +216,7 @@ local gamedata = {
 function plugin.on_game_load(data, settings)
 	
 	--Get global data
-	plugversion='09-02-2023'
+	plugversion='09-03-2023'
 	g_gameinstance = config.current_game
 	gt_coldstart = data.coldstart[g_gameinstance]
 	us_mainthreshold = settings.mainthreshold
@@ -237,6 +237,8 @@ function plugin.on_game_load(data, settings)
 	
 	--Init first frame after cold start
 	g_totalcurvarset = false
+	g_isplayerdead = false
+	g_hasbeenrevived = false
 	g_coldframe = 0
 	
 	-- Get collectable var from gametable for tracking
@@ -251,14 +253,23 @@ function plugin.on_game_load(data, settings)
 		gt_s2talismans = gamedata[g_tag].gettalismanvar()
 	end
 
-
-
 	-- Get health and lives value, set if not empty
-	gt_playerhealth = data.playerhealth[g_prevgameinstance]
-	gt_playerlives = data.playerlives[g_prevgameinstance]
-	if data.playerhealth[g_prevgameinstance] ~= nil then 
-		gamedata[g_tag].sethealthvar(gt_playerhealth)
+	-- To-do: Get health/lives after cold start
+	if g_prevgameinstance == nil then
+		-- gt_playerhealth = gamedata[g_tag].gethealthvar()
+		-- gt_playerlives = gamedata[g_tag].getlivesvar()
+		gt_playerhealth = 3
+		gt_playerlives = 4
+	else
+		gt_playerhealth = data.playerhealth[g_prevgameinstance]
+		gt_playerlives = data.playerlives[g_prevgameinstance]
+	end
+	
+	-- To-do: Set value when player isn't dead
+	-- If previous instance not loaded this session, get current value on load
+	if data.playerlives[g_prevgameinstance] ~= nil then 
 		gamedata[g_tag].setlivesvar(gt_playerlives)
+		gamedata[g_tag].sethealthvar(gt_playerhealth)
 	end
 
 	--Debug
@@ -318,7 +329,25 @@ function plugin.on_frame(data, settings)
 			gdf_s2talismans = gamedata[g_tag].gettalismanvar()
 		end
 
-		
+		-- To-do: Set health after player has revived, 
+		-- currently doesn't set health when it should post swap
+
+		-- if gdf_playerhealth < 4 then
+		-- 	g_isplayerdead = true
+		-- else
+		-- 	g_isplayerdead = false
+		-- end
+
+		-- if g_isplayerdead == false and g_hasbeenrevived == false then
+
+		-- 	gamedata[g_tag].sethealthvar(gt_playerhealth)
+		-- 	g_hasbeenrevived = true
+
+		-- 	if g_debugconsole == true then
+		-- 		console.log('Player revived this swap')
+		-- 	end
+		-- end
+
 		-- Set cur var to game memory (not HUD)
 		-- Initalizes previous frame collectable values
 		if g_totalcurvarset == false then
@@ -342,8 +371,6 @@ function plugin.on_frame(data, settings)
 				console.log('Collectables set in HUD',g_totalcurvarset)
 			end
 		end
-
-
 
 		-- 3 Get diff between current game gem count 
 		-- and total gem count from game table [f_colthisswap] (on update)
@@ -437,7 +464,7 @@ end
 		if gdf_playerhealthlastcheckvar == nil then gdf_playerhealthlastcheckvar = 0 end
 
 		gui.drawText(10, 5, string.format("Player health: %d", gdf_playerhealthlastcheckvar), 0xFFFFFFFF, 0xFF000000, 20)
-		gui.drawText(10, 25, string.format("Macguffin threshold: %d", us_mainthreshold),0xFFFFFFFF, 0xFF000000, 20)
+		gui.drawText(10, 25, string.format("Previous health: %d", gt_playerhealth),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 65, string.format("Game tag: %s", g_tag),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, 85, string.format("Game instance: %s", g_gameinstance),0xFFFFFFFF, 0xFF000000, 20)
 		gui.drawText(10, (client.screenheight() - 40), string.format("Plugin date: %s", plugversion),0xFFFFFFFF, 0xFF000000, 20)
